@@ -876,6 +876,16 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && A.playing) keepAwake(true); });
 window.__cajonDebug = () => ({ allSongs, songPlan, drumSections, findGroove, DRUMS, S });
+// 自動偵測手機方向：橫放且高度不足時切換成橫式排版
+function applyOrientation() {
+  const w = innerWidth, h = innerHeight, land = w > h && h <= 540;
+  const el = document.documentElement;
+  el.classList.toggle('land', land); el.classList.toggle('port', !land);
+}
+applyOrientation();
+addEventListener('resize', applyOrientation);
+screen.orientation?.addEventListener?.('change', () => setTimeout(applyOrientation, 60));
+addEventListener('orientationchange', () => setTimeout(applyOrientation, 120));
 shell(); render();
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.CAJON_NO_SW) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

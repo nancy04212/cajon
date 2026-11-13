@@ -389,49 +389,48 @@ select.input{appearance:auto}
 .adv .list{margin-top:8px}
 
 /* ===== 手機橫放 ===== */
-@media (orientation:landscape) and (max-height:520px){
-  .tabbar{top:0;bottom:0;right:auto;width:calc(var(--safe-l) + 76px);flex-direction:column;justify-content:center;gap:6px;padding:8px 6px 8px calc(var(--safe-l) + 6px);border-top:0;border-right:1px solid var(--line)}
-  .tab{flex:none;padding:8px 0;font-size:10px}
-  .tab svg{width:24px;height:24px}
-  .main{padding:calc(var(--safe-t) + 8px) calc(var(--safe-r) + 16px) calc(var(--safe-b) + 12px) calc(var(--safe-l) + 92px)}
-  .hd{margin:0 0 10px;min-height:40px}
-  .hd h1{font-size:22px}
-  .hd .sub{display:none}
-  .dock{bottom:calc(var(--safe-b) + 8px);padding:8px 12px;margin-top:10px}
-  .play-lg{width:50px;height:50px}
-  .play-lg svg{width:24px;height:24px}
-  .toggles{margin-top:6px}
-  .toast{bottom:calc(var(--safe-b) + 20px)}
-  .scrim{align-items:center}
-  .sheet{max-height:92vh;overflow:auto;border-radius:20px;max-width:560px}
-  .metro{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:12px}
-  .dial-card{padding:12px 12px 14px}
-  .bpm-big{font-size:68px}
-  .round-btn{width:46px;height:46px}
-  .beats{margin:10px 0 4px}
-  .beat{height:44px}
-  .play-xl{width:64px;height:64px;margin:10px auto 0}
-  .play-xl svg{width:28px;height:28px}
-  .song-top{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start;gap:12px}
-  .secs{flex-wrap:wrap}
-  .now{padding:10px 14px}
-  .nbeats{margin:8px 0 6px}
-  .sl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .gl{grid-template-columns:1fr 1fr}
-  .me-grid{grid-template-columns:1fr 1fr;align-items:start}
-  .col .n{width:min(100%,38px)}
-  .dock{display:flex;align-items:center;gap:10px}
-  .dock-main{flex:none;gap:8px}
-  .dock .slider{display:none}
-  .toggles{margin-top:0;flex:1;min-width:0}
-  .tags{display:none}
-  .ph-title small{display:none}
-  .legend{font-size:12px;gap:4px 10px;margin-bottom:8px}
-  .card{padding:12px 14px}
-  .bar{padding:6px 8px 6px}
-  .bar .bn{margin-bottom:2px}
-  .song-dock{position:fixed;margin:0;right:calc(var(--safe-r) + 16px);bottom:calc(var(--safe-b) + 8px);width:calc((100vw - var(--safe-l) - var(--safe-r) - 120px) / 2.15)}
-  .song-top > div:last-child{padding-bottom:84px}
-  .now-hint{display:none}
-  .yt-box{max-height:calc(100vh - var(--safe-t) - 170px);margin:0 auto}
-}
+/* 手機橫放：由 app.js 偵測方向後加上 html.land */
+html.land .tabbar{top:0;bottom:0;right:auto;width:calc(var(--safe-l) + 76px);flex-direction:column;justify-content:center;gap:6px;padding:8px 6px 8px calc(var(--safe-l) + 6px);border-top:0;border-right:1px solid var(--line)}
+html.land .tab{flex:none;padding:8px 0;font-size:10px}
+html.land .tab svg{width:24px;height:24px}
+html.land .main{padding:calc(var(--safe-t) + 8px) calc(var(--safe-r) + 16px) calc(var(--safe-b) + 12px) calc(var(--safe-l) + 92px)}
+html.land .hd{margin:0 0 10px;min-height:40px}
+html.land .hd h1{font-size:22px}
+html.land .hd .sub{display:none}
+html.land .dock{bottom:calc(var(--safe-b) + 8px);padding:8px 12px;margin-top:10px}
+html.land .play-lg{width:50px;height:50px}
+html.land .play-lg svg{width:24px;height:24px}
+html.land .toggles{margin-top:6px}
+html.land .toast{bottom:calc(var(--safe-b) + 20px)}
+html.land .scrim{align-items:center}
+html.land .sheet{max-height:92vh;overflow:auto;border-radius:20px;max-width:560px}
+html.land .metro{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:12px}
+html.land .dial-card{padding:12px 12px 14px}
+html.land .bpm-big{font-size:68px}
+html.land .round-btn{width:46px;height:46px}
+html.land .beats{margin:10px 0 4px}
+html.land .beat{height:44px}
+html.land .play-xl{width:64px;height:64px;margin:10px auto 0}
+html.land .play-xl svg{width:28px;height:28px}
+html.land .song-top{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start;gap:12px}
+html.land .secs{flex-wrap:wrap}
+html.land .now{padding:10px 14px}
+html.land .nbeats{margin:8px 0 6px}
+html.land .sl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+html.land .gl{grid-template-columns:1fr 1fr}
+html.land .me-grid{grid-template-columns:1fr 1fr;align-items:start}
+html.land .col .n{width:min(100%,38px)}
+html.land .dock{display:flex;align-items:center;gap:10px}
+html.land .dock-main{flex:none;gap:8px}
+html.land .dock .slider{display:none}
+html.land .toggles{margin-top:0;flex:1;min-width:0}
+html.land .tags{display:none}
+html.land .ph-title small{display:none}
+html.land .legend{font-size:12px;gap:4px 10px;margin-bottom:8px}
+html.land .card{padding:12px 14px}
+html.land .bar{padding:6px 8px 6px}
+html.land .bar .bn{margin-bottom:2px}
+html.land .song-dock{position:fixed;margin:0;right:calc(var(--safe-r) + 16px);bottom:calc(var(--safe-b) + 8px);width:calc((100vw - var(--safe-l) - var(--safe-r) - 120px) / 2.15)}
+html.land .song-top > div:last-child{padding-bottom:84px}
+html.land .now-hint{display:none}
+html.land .yt-box{max-height:calc(100vh - var(--safe-t) - 170px);margin:0 auto}
