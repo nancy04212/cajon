@@ -859,7 +859,7 @@ function viewSong(v, id) {
     ytPlayer = new YT.Player('ytp', { videoId: vid, host: 'https://www.youtube-nocookie.com', playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3 },
       events: { onStateChange: e => {
         const playing = e.data === 1;
-        playBtn.innerHTML = playing ? I.stop : I.play;
+        playBtn.innerHTML = playing ? I.stop : I.play; playBtn.setAttribute('aria-label', playing ? '暫停' : '播放');
         cancelAnimationFrame(ytRaf);
         if (playing) { practice.start(); syncLoop(); } else practice.stop();
       } } });
