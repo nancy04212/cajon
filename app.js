@@ -387,14 +387,12 @@ function updatePlayButtons() {
 }
 
 /* ---------- Router ---------- */
-const views = { metro: viewMetro, library: viewLibrary, songs: viewSongs, editor: viewEditor, me: viewMe };
+const views = { metro: viewMetro, library: viewLibrary, songs: viewSongs, me: viewMe };
 let route = { name: 'metro', arg: null };
 function parseHash() {
   const h = location.hash.replace(/^#/, '');
   if (h.startsWith('g-')) return { name: 'groove', arg: h.slice(2) };
-  if (h.startsWith('edit-')) return { name: 'editor', arg: h.slice(5) };
   if (h.startsWith('song-')) return { name: 'song', arg: h.slice(5) };
-  if (h === 'songedit' || h.startsWith('songedit-')) return { name: 'songedit', arg: h.slice(9) || null };
   return { name: views[h] ? h : 'metro', arg: null };
 }
 function go(h) { if (location.hash !== '#' + h) location.hash = h; else render(); }
@@ -405,11 +403,11 @@ function render() {
   ytStop();
   adjBpm = null;
   curGrid = null;
-  const tabName = route.name === 'groove' ? 'library' : (route.name === 'song' || route.name === 'songedit') ? 'songs' : route.name;
+  const tabName = route.name === 'groove' ? 'library' : route.name === 'song' ? 'songs' : route.name;
   $$('.tab').forEach(t => t.classList.toggle('on', t.dataset.go === tabName));
   const main = $('#main'); main.innerHTML = '';
   const v = document.createElement('div'); v.className = 'view'; main.appendChild(v);
-  ({ groove: viewGroove, song: viewSong, songedit: viewSongEdit }[route.name] || views[route.name])(v, route.arg);
+  ({ groove: viewGroove, song: viewSong }[route.name] || views[route.name])(v, route.arg);
   window.scrollTo(0, 0); updatePlayButtons();
 }
 window.addEventListener('hashchange', render);
@@ -446,13 +444,14 @@ function viewMetro(v) {
         <button class="tap-btn" id="tap">TAP 點擊測速</button>
         <div class="row" style="margin-top:14px;gap:12px"><span style="color:var(--text-2);font-size:13px;font-weight:600;white-space:nowrap">音量</span><input type="range" min="0" max="100" id="vol" class="slider"></div>
       </div>
-      <div class="section-t row" style="justify-content:space-between">訓練模式<button class="help" id="mHelp" aria-label="說明">?</button></div>
+      <div class="section-t">快速選速</div>
+      <div class="chips" id="presets">${[60, 70, 80, 90, 100, 110, 120, 140].map(b => `<button class="chip" data-b="${b}">${b}</button>`).join('')}</div>
+      <details class="adv"${S.trainer || S.gap ? ' open' : ''}><summary>進階練習<small>${S.trainer ? '速度訓練中' : S.gap ? '靜音訓練中' : '速度訓練・靜音訓練'}</small><button class="help" id="mHelp" aria-label="說明">?</button></summary>
       <div class="list">
         <div class="li"><div class="lbl">速度訓練<small>每 ${S.trEvery} 小節 +${S.trStep}，至 ${S.trMax}</small></div><button class="btn sm" id="trSet">設定</button><button class="switch ${S.trainer ? 'on' : ''}" id="trSw" aria-label="速度訓練"></button></div>
         <div class="li"><div class="lbl">靜音訓練<small>響 ${S.gapPlay} 小節・停 ${S.gapMute} 小節</small></div><button class="btn sm" id="gapSet">設定</button><button class="switch ${S.gap ? 'on' : ''}" id="gapSw" aria-label="靜音訓練"></button></div>
       </div>
-      <div class="section-t">快速選速</div>
-      <div class="chips" id="presets">${[60, 70, 80, 90, 100, 110, 120, 140].map(b => `<button class="chip" data-b="${b}">${b}</button>`).join('')}</div>
+      </details>
     </div>
   </div>`;
   const big = $('#bpmBig', v), r = $('#bpmR', v);
@@ -480,7 +479,7 @@ function viewMetro(v) {
   $('#cSnd', v).onclick = () => sheet('音色', `<div class="grid-btns" style="grid-template-columns:repeat(3,1fr)">${Object.entries(SOUNDS).map(([k, s]) => `<button class="${k === S.sound ? 'on' : ''}" data-k="${k}" style="font-size:16px">${s.name}</button>`).join('')}</div>`,
     (el, close) => el.onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; S.sound = b.dataset.k; saveS(); ensureAudio(); SOUNDS[S.sound].play(A.ctx.currentTime + 0.01, 'accent', S.vol);
       $$('[data-k]', el).forEach(x => x.classList.toggle('on', x === b)); $('#cSnd b').textContent = SOUNDS[S.sound].name; setTimeout(close, 250); });
-  $('#mHelp', v).onclick = () => helpSheet([['速度訓練', '每隔幾小節自動加快，<br>到上限就停。'], ['靜音訓練', '響幾小節、停幾小節。<br>停的時候繼續打，練穩定。'], ['TAP', '跟著音樂點幾下，<br>自動算出速度。'], ['重音', '點節拍格切換：<br>重 → 中 → 輕 → 靜音。']]);
+  $('#mHelp', v).onclick = e => (e.preventDefault(), helpSheet([['速度訓練', '每隔幾小節自動加快，<br>到上限就停。'], ['靜音訓練', '響幾小節、停幾小節。<br>停的時候繼續打，練穩定。'], ['TAP', '跟著音樂點幾下，<br>自動算出速度。'], ['重音', '點節拍格切換：<br>重 → 中 → 輕 → 靜音。']]));
   $('#trSw', v).onclick = e => { S.trainer = !S.trainer; e.currentTarget.classList.toggle('on', S.trainer); saveS(); toast(S.trainer ? '速度訓練已開啟' : '速度訓練已關閉'); };
   $('#gapSw', v).onclick = e => { S.gap = !S.gap; e.currentTarget.classList.toggle('on', S.gap); saveS(); if (!S.gap) $('#gapState').textContent = ''; };
   $('#trSet', v).onclick = () => numSheet('速度訓練', [['每幾小節', 'trEvery', 1, 32], ['每次加速 BPM', 'trStep', 1, 20], ['最高 BPM', 'trMax', 40, 300]], () => { S.trainer = true; render(); });
@@ -497,8 +496,8 @@ function numSheet(title, fields, done) {
 /* ---------- View: Library ---------- */
 let libCat = 'all', libQ = '';
 function viewLibrary(v) {
-  const cats = [{ id: 'all', name: '全部' }, { id: 'fav', name: '★ 收藏' }, { id: 'mine', name: '我的節奏' }, ...CATS];
-  v.innerHTML = `<div class="hd"><div class="grow"><h1>節奏庫</h1><div class="sub">${GROOVES.length} 種律動・木箱鼓格狀譜</div></div><button class="btn sm primary" onclick="location.hash='editor'">${I.plus}自編</button></div>
+  const cats = [{ id: 'all', name: '全部' }, { id: 'fav', name: '★ 收藏' }, ...(allGrooves().some(g => g.custom) ? [{ id: 'mine', name: '我的節奏' }] : []), ...CATS];
+  v.innerHTML = `<div class="hd"><div class="grow"><h1>節奏庫</h1><div class="sub">${GROOVES.length} 種律動・木箱鼓格狀譜</div></div></div>
   <div class="search">${I.search}<input class="input" id="q" placeholder="搜尋節奏，例如：抒情、Funk、6/8" value="${esc(libQ)}"></div>
   <div class="chips" id="cats">${cats.map(c => `<button class="chip ${c.id === libCat ? 'on' : ''}" data-c="${c.id}">${c.name}</button>`).join('')}</div>
   <div id="gl"></div>`;
@@ -533,8 +532,7 @@ function viewGroove(v, id) {
   v.innerHTML = `
   <div class="hd"><button class="icon-btn" onclick="history.length>1?history.back():location.hash='library'" aria-label="返回">${I.back}</button>
     <div class="grow ph-title"><b>${esc(g.name)}</b><small>${esc(g.en || '自編節奏')}</small></div>
-    <button class="icon-btn" id="fav" aria-label="收藏" style="color:${favs.has(id) ? 'var(--amber)' : 'inherit'}">${favs.has(id) ? I.starF : I.star}</button>
-    <button class="icon-btn" id="dup" aria-label="${g.custom ? '編輯' : '複製到編輯器'}" title="${g.custom ? '編輯' : '複製到編輯器修改'}">${g.custom ? I.edit : I.copy}</button></div>
+    <button class="icon-btn" id="fav" aria-label="收藏" style="color:${favs.has(id) ? 'var(--amber)' : 'inherit'}">${favs.has(id) ? I.starF : I.star}</button></div>
   <div class="tags"><span class="tag">${cat ? cat.name : '我的節奏'}</span><span class="tag num">${tsLabel(g)}</span><span class="tag">${LV[g.lv || 1]} ${levelHtml(g.lv || 1)}</span><span class="tag num">建議 ${g.range ? g.range.join('–') : g.bpm} BPM</span><span class="tag">${g.bars.length} 小節循環</span></div>
   <div class="card">${legendHtml()}<div id="grid"></div></div>
   ${g.note ? `<div class="note">${I.bulb}${esc(g.note)}</div>` : ''}
@@ -550,7 +548,6 @@ function viewGroove(v, id) {
       <button class="tg" data-t="gClick">${I.click}節拍</button>
       <button class="tg" data-t="gCount">${I.count}預備拍</button>
       <button class="tg" data-t="gTrainer">${I.rocket}速度訓練</button>
-      <button class="tg" id="mix">${I.sliders}混音・Swing</button>
       <button class="tg" id="tapG">TAP</button>
       <button class="tg help-tg" id="pHelp" aria-label="說明">?</button>
     </div>
@@ -571,14 +568,7 @@ function viewGroove(v, id) {
   $$('.tg[data-t]', v).forEach(b => b.onclick = () => { const k = b.dataset.t; S[k] = !S[k]; saveS(); syncT(); if (k === 'gTrainer') { upTr(); toast(S.gTrainer ? '速度訓練已開啟' : '速度訓練已關閉'); } });
   $('#pHelp', v).onclick = () => helpSheet([['鼓聲', '播放木箱鼓示範。<br>關掉就只剩節拍，自己打。'], ['節拍', '同時播放節拍器。'], ['預備拍', '開始前先數一小節。'], ['速度訓練', '每循環幾次自動加快，<br>到目標速度就停。'], ['混音', '調整鼓聲、節拍音量，<br>以及 Swing 搖擺感。'], ['TAP', '跟著歌曲點幾下，<br>自動算出速度。']]);
   $('#tapG', v).onclick = () => { const b = tapper.tap(); if (b) setBpm(b); };
-  $('#mix', v).onclick = () => sheet('混音・Swing', `<div class="list">
-      <div class="li"><div class="lbl">鼓聲音量</div><input type="range" min="0" max="150" data-k="drumVol" data-s="100" style="max-width:55%"></div>
-      <div class="li"><div class="lbl">節拍音量</div><input type="range" min="0" max="150" data-k="clickVol" data-s="100" style="max-width:55%"></div>
-      <div class="li"><div class="lbl">Swing 搖擺感<small id="swv">${S.gSwing}%</small></div><input type="range" min="0" max="100" data-k="gSwing" data-s="1" style="max-width:55%"></div></div>
-      <p class="fine">Swing：反拍往後延，變成搖擺感。</p>`,
-    el => $$('input[type=range]', el).forEach(r => { r.value = S[r.dataset.k] * +r.dataset.s; setRangeFill(r); r.oninput = () => { S[r.dataset.k] = r.value / +r.dataset.s; setRangeFill(r); saveS(); if (r.dataset.k === 'gSwing') $('#swv', el).textContent = r.value + '%'; }; }));
   $('#fav', v).onclick = e => { favs.has(id) ? favs.delete(id) : favs.add(id); store.set('favs', [...favs]); const on = favs.has(id); e.currentTarget.innerHTML = on ? I.starF : I.star; e.currentTarget.style.color = on ? 'var(--amber)' : 'inherit'; toast(on ? '已加入收藏' : '已取消收藏'); };
-  $('#dup', v).onclick = () => { if (g.custom) go('edit-' + id); else { draft = { ...JSON.parse(JSON.stringify(g)), id: null, name: g.name + '（改編）', custom: true }; go('editor'); } };
   const G = prep(g, () => bpm);
   G.onLoop = (loop, t) => { const mx = S.gTrMax || (g.range ? g.range[1] : bpm + 30); if (loop % S.gTrEvery === 0 && bpm < mx) { bpm = Math.min(mx, bpm + S.gTrStep); S.gBpm[id] = bpm; saveS(); visQ.push({ t, k: 'gbpm', bpm }); } };
   $('[data-play]', v).onclick = () => A.playing && A.owner === owner ? stop() : start('groove', owner, { groove: G });
@@ -587,66 +577,6 @@ function viewGroove(v, id) {
 /* ---------- View: Editor ---------- */
 let draft = null;
 function blankDraft() { return { id: null, name: '我的節奏', en: '', cat: 'mine', lv: 1, bpm: 80, range: null, ts: [4, 4], spb: 4, bars: ['................'], custom: true, tip: '' }; }
-function viewEditor(v, id) {
-  if (id) { const g = customs.find(c => c.id === id); if (g) draft = JSON.parse(JSON.stringify(g)); }
-  if (!draft) draft = blankDraft();
-  const d = draft; let brush = 'B'; let bpm = d.bpm;
-  const owner = 'editor';
-  v.innerHTML = `<div class="hd"><div class="grow"><h1>${d.id ? '編輯節奏' : '自編節奏'}</h1><div class="sub">選音色，點格子填入</div></div></div>
-  <div class="card">
-    <input class="input" id="nm" value="${esc(d.name)}" placeholder="節奏名稱" style="font-weight:700;font-size:17px">
-    <div class="ed-opts">
-      <div><label>拍號</label><div class="seg" id="tsSeg">${[[2, 4], [3, 4], [4, 4], [5, 4], [6, 8], [7, 8]].map(t => `<button data-t="${t.join('/')}" class="${t[0] === d.ts[0] && t[1] === d.ts[1] ? 'on' : ''}">${t[0]}/${t[1]}</button>`).join('')}</div></div>
-      <div><label>每拍格數</label><div class="seg" id="spbSeg">${[[2, '八分'], [3, '三連音'], [4, '十六分']].map(([n, l]) => `<button data-n="${n}" class="${n === d.spb ? 'on' : ''}">${l}</button>`).join('')}</div></div>
-      <div><label>小節數</label><div class="row"><div class="stepper"><button id="barM">−</button><span class="num" id="barN">${d.bars.length}</span><button id="barP">+</button></div><button class="btn sm" id="clr" style="margin-left:auto">${I.trash}清空</button></div></div>
-    </div>
-    <div class="brushes" id="brushes">${[['B', '低音', 'background:var(--c-B);color:var(--on-B)'], ['T', '中音', 'background:var(--c-T);color:var(--on-T)'], ['S', '響音', 'background:var(--c-S);color:var(--on-S)'], ['s', '鬼音', 'color:var(--c-g);box-shadow:inset 0 0 0 1.5px var(--c-g)'], ['.', '休止', 'color:var(--text-3);background:var(--surface-3)']]
-      .map(([k, l, st]) => `<button class="brush ${k === brush ? 'on' : ''}" data-b="${k}"><span class="k" style="${st}">${k === '.' ? '·' : k}</span>${l}</button>`).join('')}</div>
-  </div>
-  <div class="card" style="margin-top:14px"><div id="grid"></div></div>
-  <div class="dock">
-    <div class="dock-main">
-      <button class="play-lg" data-play="${owner}" aria-label="播放"></button>
-      <div class="bpm-mini"><button class="icon-btn" id="m">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p">${I.plus}</button></div>
-      <div style="flex:1"></div>
-      ${d.id ? `<button class="icon-btn" id="del" aria-label="刪除">${I.trash}</button>` : ''}
-      <button class="btn primary" id="save">儲存</button>
-    </div>
-  </div>`;
-  const n = () => d.ts[0] * d.spb;
-  const gridEl = $('#grid', v);
-  const draw = () => { curGrid = renderGrid(gridEl, d, { editable: true }); };
-  const restart = () => { if (A.playing && A.owner === owner) play(); };
-  draw();
-  gridEl.onclick = e => {
-    const c = e.target.closest('.col'); if (!c) return;
-    const i = +c.dataset.i, bi = Math.floor(i / n()), si = i % n();
-    const cur = d.bars[bi][si]; const nv = cur === brush ? '.' : brush;
-    d.bars[bi] = d.bars[bi].slice(0, si) + nv + d.bars[bi].slice(si + 1);
-    const nEl = $('.n', c); nEl.className = 'n ' + (nv === '.' ? 'r' : nv); nEl.textContent = nv === '.' ? '·' : nv;
-    if (nv !== '.') { ensureAudio(); cajon[nv](A.ctx.currentTime + 0.005, S.drumVol); }
-    if (A.playing && A.owner === owner) A.groove.flat = d.bars.join('').split('');
-  };
-  $('#brushes', v).onclick = e => { const b = e.target.closest('.brush'); if (!b) return; brush = b.dataset.b; $$('.brush', v).forEach(x => x.classList.toggle('on', x === b)); };
-  const resize = () => { const len = n(); d.bars = d.bars.map(b => (b + '.'.repeat(len)).slice(0, len)); d.hands = null; d.counts = null; draw(); restart(); };
-  $('#tsSeg', v).onclick = e => { const b = e.target.closest('button'); if (!b) return; d.ts = b.dataset.t.split('/').map(Number); $$('#tsSeg button').forEach(x => x.classList.toggle('on', x === b)); resize(); };
-  $('#spbSeg', v).onclick = e => { const b = e.target.closest('button'); if (!b) return; d.spb = +b.dataset.n; $$('#spbSeg button').forEach(x => x.classList.toggle('on', x === b)); d.bars = d.bars.map(() => '.'.repeat(n())); resize(); };
-  $('#barP', v).onclick = () => { if (d.bars.length >= 8) return; d.bars.push('.'.repeat(n())); $('#barN').textContent = d.bars.length; draw(); restart(); };
-  $('#barM', v).onclick = () => { if (d.bars.length <= 1) return; d.bars.pop(); $('#barN').textContent = d.bars.length; draw(); restart(); };
-  $('#clr', v).onclick = () => { d.bars = d.bars.map(() => '.'.repeat(n())); draw(); restart(); };
-  $('#nm', v).oninput = e => d.name = e.target.value;
-  const bv = $('#bv', v); const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); d.bpm = bpm; bv.textContent = bpm; };
-  setBpm(bpm); adjBpm = dd => setBpm(bpm + dd); bpmGesture($('#bvw', v), () => bpm, setBpm); holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
-  const play = () => start('groove', owner, { groove: prep(d, () => bpm) });
-  $('[data-play]', v).onclick = () => A.playing && A.owner === owner ? stop() : play();
-  $('#save', v).onclick = () => {
-    if (!d.bars.join('').replace(/\./g, '')) { toast('先填入幾個音符吧'); return; }
-    d.name = d.name.trim() || '我的節奏'; d.bpm = bpm;
-    if (!d.id) { d.id = 'my' + Date.now().toString(36); customs.unshift(d); } else { const i = customs.findIndex(c => c.id === d.id); if (i >= 0) customs[i] = d; else customs.unshift(d); }
-    store.set('customs', customs); toast('已儲存到「我的節奏」'); const sid = d.id; draft = null; go('g-' + sid);
-  };
-  $('#del', v)?.addEventListener('click', () => confirmSheet('刪除節奏', `確定刪除「${d.name}」？刪除後無法復原。`, '刪除', () => { customs = customs.filter(c => c.id !== d.id); store.set('customs', customs); favs.delete(d.id); store.set('favs', [...favs]); draft = null; toast('已刪除'); go('library'); }));
-}
 
 /* ---------- Songs ---------- */
 let songCustoms = store.get('songs', []);
@@ -684,7 +614,7 @@ const afuSongs = () => (COVERS.items || []).map(c => {
   const m = Object.assign({}, SONG_META[c.song] || {}, SONG_META[c.yt] || {});
   return { id: c.yt, title: m.title || c.song, artist: m.artist || c.artist, cat: 'cover', yt: c.yt, coverOnly: true, coverBy: c.by, sheet: c.sheet, bpm: bpmOf(m, c.yt) || 80, needsBpm: !bpmOf(m, c.yt), cover: null, sections: m.sections || SONG_DEFAULT_SECTIONS, metaSecs: !!m.sections, drums: DRUMS.items[c.yt] || null };
 });
-const allSongs = () => { const cm = coverMap(); const ch = chartSongs().map(s => { if (!s.cover) { const c = cm.get(normT(s.title)); if (c) s.cover = { yt: c.yt, by: c.by + (c.sheet ? '（附鼓譜）' : '') }; } const af = cm.get(normT(s.title)); if (af && DRUMS.items[af.yt] && !(s.cover && DRUMS.items[s.cover.yt])) s.cover = { yt: af.yt, by: af.by + '（附鼓譜）' }; s.drums = (s.cover && DRUMS.items[s.cover.yt]) || null; return s; }); return [...songCustoms, ...ch, ...afuSongs()]; };
+const allSongs = () => { const cm = coverMap(); const ch = chartSongs().map(s => { if (!s.cover) { const c = cm.get(normT(s.title)); if (c) s.cover = { yt: c.yt, by: c.by + (c.sheet ? '（附鼓譜）' : '') }; } const af = cm.get(normT(s.title)); if (af && DRUMS.items[af.yt] && !(s.cover && DRUMS.items[s.cover.yt])) s.cover = { yt: af.yt, by: af.by + '（附鼓譜）' }; s.drums = (s.cover && DRUMS.items[s.cover.yt]) || null; return s; }); return [...ch, ...afuSongs()]; };
 fetch('covers.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = (j.items || []).length !== (COVERS.items || []).length; COVERS = j; store.set('covers', j); if (changed && route && route.name === 'songs') render(); }).catch(() => {});
 fetch('charts.json', { cache: 'no-cache' }).then(r => r.json()).then(j => {
   const changed = JSON.stringify(j.items) !== JSON.stringify(CHART.items);
@@ -731,16 +661,16 @@ function loadYT() {
 function ytStop() { cancelAnimationFrame(ytRaf); ytRaf = 0; try { ytPlayer && ytPlayer.destroy(); } catch (e) {} ytPlayer = null; }
 
 function viewSongs(v) {
-  const cats = [['chart', '排行榜'], ['cover', 'A FU 木箱鼓'], ['mine', '我的']];
-  if (!['chart', 'cover', 'mine'].includes(songCat)) songCat = 'chart';
-  v.innerHTML = `<div class="hd"><div class="grow"><h1>歌曲</h1><div class="sub">${CHART.updated ? `排行榜每月自動更新・${CHART.updated}` : '跟著原曲練節奏'}</div></div><button class="btn sm primary" id="addSong">${I.plus}新增</button></div>
+  const cats = [['chart', '排行榜'], ['cover', 'A FU 木箱鼓']];
+  if (!['chart', 'cover'].includes(songCat)) songCat = 'chart';
+  v.innerHTML = `<div class="hd"><div class="grow"><h1>歌曲</h1><div class="sub">${CHART.updated ? `排行榜每月自動更新・${CHART.updated}` : '跟著原曲練節奏'}</div></div></div>
   <div class="search">${I.search}<input class="input" id="sq" placeholder="搜尋歌名或歌手" value="${esc(songQ)}"></div>
   <div class="chips" id="scats">${cats.map(([k, l]) => `<button class="chip ${k === songCat ? 'on' : ''}" data-c="${k}">${l}</button>`).join('')}</div>
   <div class="fine" id="shint" style="margin:6px 4px 0"></div>
   <div class="sl" id="sl"></div>`;
   const draw = () => {
     const q = songQ.trim().toLowerCase();
-    let list = allSongs().filter(s => songCat === 'mine' ? s.custom : songCat === 'cover' ? s.coverOnly : (!s.custom && !s.coverOnly));
+    let list = allSongs().filter(s => songCat === 'cover' ? s.coverOnly : (!s.custom && !s.coverOnly));
     if (q) list = allSongs().filter(s => (s.title + ' ' + s.artist).toLowerCase().includes(q));
     $('#shint', v).textContent = q ? `找到 ${list.length} 首` : songCat === 'chart' ? (CHART.sources ? '合併 ' + CHART.sources.map(x => x.name).join('、') : '') : songCat === 'cover' ? `A FU Cajon 共 ${list.length} 首・多數附鼓譜` : '';
     $('#sl', v).innerHTML = list.length ? list.map(s => `<button class="sc" data-id="${esc(s.id)}"><div class="th">${I.song}${s.yt ? `<img src="${ytThumb(s.yt)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${s.rank ? `<span class="rank num">${s.rank}</span>` : ''}</div>
@@ -748,7 +678,6 @@ function viewSongs(v) {
       : `<div class="empty">還沒有自己的歌曲<br><br><button class="btn primary" onclick="location.hash='songedit'">新增歌曲</button></div>`;
   };
   draw();
-  $('#addSong', v).onclick = () => { songDraft = null; go('songedit'); };
   $('#sq', v).oninput = e => { songQ = e.target.value; draw(); };
   $('#scats', v).onclick = e => { const c = e.target.closest('.chip'); if (!c) return; songCat = c.dataset.c; songQ = ''; $('#sq', v).value = ''; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); draw(); };
   $('#sl', v).onclick = e => { const c = e.target.closest('.sc'); if (c) go('song-' + c.dataset.id); };
@@ -891,55 +820,6 @@ function viewSong(v, id) {
   $('#sEdit', v)?.addEventListener('click', () => go('songedit-' + id));
 }
 
-let songDraft = null;
-const SEC_NAMES = ['前奏', '主歌', '導歌', '副歌', '間奏', '橋段', '過門', '尾奏'];
-function viewSongEdit(v, id) {
-  if (id) { const s = songCustoms.find(x => x.id === id); if (s) songDraft = JSON.parse(JSON.stringify(s)); }
-  if (!songDraft) songDraft = { id: null, title: '', artist: '', cat: '我的', bpm: 80, yt: '', cover: null, sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-mid', 16], ['副歌', 'soul', 16]], custom: true };
-  const d = songDraft;
-  const opts = cur => `<option value="rest" ${cur === 'rest' ? 'selected' : ''}>休息（無鼓）</option>` + CATS.map(c => `<optgroup label="${c.name}">${allGrooves().filter(g => g.cat === c.id && !g.custom).map(g => `<option value="${g.id}" ${g.id === cur ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</optgroup>`).join('')
-    + (customs.length ? `<optgroup label="我的節奏">${customs.map(g => `<option value="${g.id}" ${g.id === cur ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</optgroup>` : '');
-  v.innerHTML = `<div class="hd"><button class="icon-btn" onclick="history.back()" aria-label="返回">${I.back}</button><div class="grow"><h1 style="font-size:26px">${d.id ? '編輯歌曲' : '新增歌曲'}</h1></div></div>
-  <div class="card form">
-    <label>歌名</label><input class="input" id="fT" value="${esc(d.title)}" placeholder="例如：稻香">
-    <label>歌手</label><input class="input" id="fA" value="${esc(d.artist || '')}" placeholder="例如：周杰倫">
-    <label>YouTube 連結</label><input class="input" id="fY" value="${d.yt ? ytWatch(d.yt) : ''}" placeholder="貼上影片網址" inputmode="url">
-    <label>木箱鼓示範（選填）</label><input class="input" id="fC" value="${d.cover?.yt ? ytWatch(d.cover.yt) : ''}" placeholder="貼上示範影片網址" inputmode="url">
-    <label>速度</label><div class="row"><div class="bpm-mini"><button class="icon-btn" id="m">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv">${d.bpm}</div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p">${I.plus}</button></div><button class="btn sm" id="tapB" style="margin-left:auto">TAP 測速</button></div>
-  </div>
-  <div class="section-t">段落</div>
-  <div class="list" id="secList"></div>
-  <button class="btn" id="addSec" style="margin-top:10px;width:100%">${I.plus}新增段落</button>
-  <div class="row" style="margin:20px 0 8px;gap:10px">${d.id ? `<button class="btn" id="delS" style="color:var(--danger)">${I.trash}刪除</button>` : ''}<button class="btn primary" id="saveS" style="flex:1">儲存</button></div>`;
-  const drawSecs = () => {
-    $('#secList', v).innerHTML = d.sections.map(([nm, gid, bars], i) => `<div class="li sec-row" data-i="${i}">
-      <select class="input sel-name" data-f="0">${[...new Set([...SEC_NAMES, nm])].map(n => `<option ${n === nm ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
-      <select class="input sel-g" data-f="1">${opts(gid)}</select>
-      <div class="stepper"><button data-b="-1">−</button><span class="num">${bars}</span><button data-b="1">+</button></div>
-      <button class="icon-btn ghost" data-del aria-label="刪除段落">${I.trash}</button></div>`).join('');
-  };
-  drawSecs();
-  const list = $('#secList', v);
-  list.addEventListener('change', e => { const r = e.target.closest('.sec-row'); if (!r) return; d.sections[+r.dataset.i][+e.target.dataset.f] = e.target.value; });
-  list.addEventListener('click', e => {
-    const r = e.target.closest('.sec-row'); if (!r) return; const i = +r.dataset.i;
-    if (e.target.closest('[data-del]')) { if (d.sections.length > 1) { d.sections.splice(i, 1); drawSecs(); } return; }
-    const b = e.target.closest('[data-b]'); if (b) { const up = +b.dataset.b > 0, cur = d.sections[i][2], st = (up ? cur >= 8 : cur > 8) ? 4 : 1; d.sections[i][2] = clamp(cur + (up ? st : -st), 1, 64); r.querySelector('.stepper span').textContent = d.sections[i][2]; }
-  });
-  $('#addSec', v).onclick = () => { const lastS = d.sections[d.sections.length - 1]; d.sections.push(['副歌', lastS ? lastS[1] : 'pop-mid', 8]); drawSecs(); };
-  const bv = $('#bv', v); const setB = b => { d.bpm = clamp(Math.round(b), 30, 260); bv.textContent = d.bpm; };
-  holdRepeat($('#m', v), () => setB(d.bpm - 1)); holdRepeat($('#p', v), () => setB(d.bpm + 1)); bpmGesture($('#bvw', v), () => d.bpm, setB);
-  $('#tapB', v).onclick = () => { const b = tapper.tap(); if (b) setB(b); };
-  $('#saveS', v).onclick = () => {
-    d.title = $('#fT', v).value.trim(); d.artist = $('#fA', v).value.trim();
-    if (!d.title) { $('#fT', v).focus(); toast('請輸入歌名'); return; }
-    const y = $('#fY', v).value.trim(); d.yt = parseYT(y); if (y && !d.yt) { toast('YouTube 連結無法辨識'); return; }
-    const c = parseYT($('#fC', v).value); d.cover = c ? { yt: c, by: '木箱鼓示範' } : null;
-    if (!d.id) { d.id = 'mysong' + Date.now().toString(36); songCustoms.unshift(d); } else { const i = songCustoms.findIndex(x => x.id === d.id); if (i >= 0) songCustoms[i] = d; else songCustoms.unshift(d); }
-    store.set('songs', songCustoms); toast('已儲存'); const sid = d.id; songDraft = null; go('song-' + sid);
-  };
-  $('#delS', v)?.addEventListener('click', () => confirmSheet('刪除歌曲', `確定刪除「${d.title}」？`, '刪除', () => { songCustoms = songCustoms.filter(x => x.id !== d.id); store.set('songs', songCustoms); songDraft = null; go('songs'); }));
-}
 
 /* ---------- View: Me ---------- */
 let installEvt = null;
@@ -964,37 +844,29 @@ function viewMe(v) {
       ${DESKTOP ? `<div class="li"><div class="lbl">快捷鍵<small><span class="kbd">Space</span> 播放　<span class="kbd">↑</span><span class="kbd">↓</span> 速度　<span class="kbd">T</span> 測速</small></div></div>` : ''}
       <div class="li"><div class="lbl">清除練習紀錄</div><button class="btn sm" id="clrLog">清除</button></div>
     </div>
-    <div class="section-t">安裝到主畫面</div>
+  </div><div>
+    <div class="section-t" style="margin-top:4px">安裝到主畫面</div>
     <div class="card">
       ${standalone ? '<div style="font-weight:600">✓ 已以 App 模式開啟</div>' : installEvt ? `<button class="btn primary" id="inst" style="width:100%">安裝 Cajon App</button>` : isIOS ? `<div style="font-weight:600">iPhone / iPad</div><ol class="install-steps"><li>用 <b>Safari</b> 開啟本頁網址</li><li>點下方 <b>分享</b> 按鈕</li><li>選擇 <b>加入主畫面</b></li></ol>` :
       `<div style="font-weight:600">Android / 電腦</div><ol class="install-steps"><li>用 Chrome 或 Edge 開啟本頁網址</li><li>點網址列右側的 <b>安裝</b> 圖示，或選單 → <b>安裝應用程式／加入主畫面</b></li></ol>`}
     </div>
-  </div><div>
-    <div class="section-t" style="margin-top:4px">參考創作者</div>
-    <div class="list">${creators.map((c, i) => `<div class="li" style="align-items:flex-start"><div class="creator" style="flex:1"><div class="avatar" style="background:${COLORS[i % COLORS.length]}">${esc(c.name[0])}</div><div style="min-width:0"><b>${esc(c.name)}</b><div style="color:var(--text-2);font-size:13px">${esc(c.handle || '')}${c.desc ? ' · ' + esc(c.desc) : ''}</div><div class="links">${c.links.map(l => `<a class="btn sm" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</div></div></div>${c.user ? `<button class="icon-btn ghost" data-rm="${i - CREATORS.length}" aria-label="移除">${I.trash}</button>` : ''}</div>`).join('')}
-      <div class="li"><button class="btn sm" id="addC">${I.plus}新增創作者</button></div></div>
-  </div></div>`;
+</div></div>`;
   $('#theme', v).onclick = e => { const b = e.target.closest('button'); if (!b) return; S.theme = b.dataset.k; saveS(); applyTheme(); $$('#theme button').forEach(x => x.classList.toggle('on', x === b)); };
   $('#clrLog', v).onclick = () => confirmSheet('清除練習紀錄', '所有練習時間紀錄將被刪除，無法復原。', '清除', () => { log = {}; store.set('log', log); render(); });
   $('#inst', v)?.addEventListener('click', async () => { installEvt.prompt(); await installEvt.userChoice; installEvt = null; render(); });
-  $$('[data-rm]', v).forEach(b => b.onclick = () => { userCreators.splice(+b.dataset.rm, 1); store.set('creators', userCreators); render(); });
-  $('#addC', v).onclick = () => sheet('新增創作者', `<div style="display:grid;gap:10px"><input class="input" id="cn" placeholder="名稱（必填）"><input class="input" id="ch" placeholder="帳號，例如 @cajon_xxx"><input class="input" id="cu" placeholder="連結網址（YouTube / Instagram）" inputmode="url"><button class="btn primary" id="cok">新增</button></div>`,
-    (el, close) => $('#cok', el).onclick = () => { const name = $('#cn', el).value.trim(); let url = $('#cu', el).value.trim(); if (!name) { $('#cn', el).focus(); return; }
-      if (url && !/^https?:\/\//.test(url)) url = 'https://' + url;
-      const label = /instagram/.test(url) ? 'Instagram' : /youtu/.test(url) ? 'YouTube' : '連結';
-      userCreators.push({ name, handle: $('#ch', el).value.trim(), desc: '', links: url ? [{ label, url }] : [], user: true }); store.set('creators', userCreators); close(); render(); });
+
 }
 
 /* ---------- Shell ---------- */
 function shell() {
-  const tabs = [['metro', '節拍器', I.metro], ['library', '節奏庫', I.lib], ['songs', '歌曲', I.song], ['editor', '自編', I.edit], ['me', '我的', I.me]];
+  const tabs = [['metro', '節拍器', I.metro], ['library', '節奏庫', I.lib], ['songs', '歌曲', I.song], ['me', '我的', I.me]];
   const tabHtml = tabs.map(([k, l, ic]) => `<button class="tab" data-go="${k}">${ic}<span>${l}</span></button>`).join('');
   document.body.innerHTML = `<div class="app">
     <nav class="side" aria-label="主選單"><div class="brand"><img src="${window.CAJON_ICON || 'icon-192.png'}" alt=""><div><b>Cajon</b><small>木箱鼓節拍訓練</small></div></div>${tabHtml}<div class="foot">B 低音・T 中音<br>S 響音・s 鬼音</div></nav>
     <main class="main" id="main"></main>
     <nav class="tabbar" aria-label="主選單">${tabHtml}</nav></div>
     <div class="toast" id="toast" role="status"></div><div class="ci-badge num" id="ci"></div>`;
-  $$('.tab').forEach(t => t.onclick = () => { if (t.dataset.go === 'editor' && route.name !== 'editor') draft = null; go(t.dataset.go); });
+  $$('.tab').forEach(t => t.onclick = () => { go(t.dataset.go); });
 }
 document.addEventListener('keydown', e => {
   if (e.target.matches('input,textarea,select') || e.metaKey || e.ctrlKey) return;

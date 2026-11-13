@@ -379,3 +379,12 @@ select.input{appearance:auto}
 .now .rest-bar{width:100%;margin:8px 0 0}
 .now-hint{margin:8px 2px 0}
 .dock-main .tg{white-space:nowrap}
+
+.adv{margin-top:20px}
+.adv summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;font-size:15px;padding:6px 4px;color:var(--text-2)}
+.adv summary::-webkit-details-marker{display:none}
+.adv summary::before{content:'';width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .2s;margin-right:4px}
+.adv[open] summary::before{transform:rotate(45deg)}
+.adv summary small{font-weight:500;color:var(--text-3);font-size:12px}
+.adv summary .help{margin-left:auto}
+.adv .list{margin-top:8px}
