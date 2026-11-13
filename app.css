@@ -137,7 +137,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 .dial-card{padding:22px 16px 20px;text-align:center;position:relative;overflow:hidden}
 .tempo-name{font-size:14px;color:var(--text-2);font-weight:600;letter-spacing:.02em;height:20px}
 .bpm-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0 6px}
-.bpm-big{font-size:clamp(80px,24vw,112px);line-height:1;font-weight:800;letter-spacing:-.05em;min-width:3.2ch;cursor:ns-resize;user-select:none;touch-action:none}
+.bpm-big{font-size:clamp(80px,24vw,112px);line-height:1;font-weight:800;letter-spacing:-.05em;min-width:3.2ch}
 .bpm-unit{font-size:13px;color:var(--text-3);font-weight:700;letter-spacing:.15em;margin-top:-4px}
 .round-btn{width:56px;height:56px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;transition:transform .12s;user-select:none;touch-action:manipulation}
 .round-btn:active{transform:scale(.9);background:var(--surface-3)}
@@ -328,3 +328,10 @@ h1,h3,.ph-title b{text-wrap:balance}
 .sec-row .sel-g{flex:1;min-width:110px}
 select.input{appearance:auto}
 @media(max-width:400px){.tab{font-size:10px}.tab svg{width:24px;height:24px}}
+
+/* BPM swipe */
+.bpm-touch{touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize;border-radius:12px;padding:2px 6px;transition:background .15s}
+.bpm-touch:active{background:var(--surface-2)}
+.bpm-touch .u,.bpm-unit{white-space:nowrap}
+.bpm-input{height:76px;font-size:44px;font-weight:800;text-align:center}
+.quick{flex-wrap:wrap;margin:12px 0 0;padding:0}

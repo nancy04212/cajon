@@ -1,38 +1,28 @@
 // 歌曲練習資料。sections: [段落名稱, 節奏 id, 小節數]
-// 段落是木箱鼓練習用的簡化編排，不一定與原曲完全相同；可在 App 內自行修改或新增歌曲。
-window.SONG_CATS = ['華語流行', '英文流行', '詩歌'];
+// 速度參考 Tunebat（Spotify 資料）；段落是木箱鼓練習用的簡化編排，可在 App 內修改。
+window.SONG_CATS = ['熱門華語', '神曲'];
 window.SONGS = [
-  { id: 'daoxiang', title: '稻香', artist: '周杰倫', cat: '華語流行', bpm: 82, yt: 'sHD_z90ZKV0',
-    cover: { yt: '1v4SkxTUpEM', by: 'Mr.One 木箱鼓教學' },
-    sections: [['前奏', 'eighth-beat', 4], ['主歌', 'pop-mid', 16], ['副歌', 'soul', 16], ['過門', 'fill-basic', 2], ['主歌', 'pop-mid', 16], ['副歌', 'soul', 16], ['尾奏', 'eighth-beat', 4]] },
-  { id: 'qingtian', title: '晴天', artist: '周杰倫', cat: '華語流行', bpm: 68, yt: 'DYptgVvkVLQ',
-    cover: { yt: 'lPmtWPXQpao', by: 'Mr.One 木箱鼓' },
+  // ---- 熱門華語（2025 台灣播放量最高新歌）
+  { id: 'xiangqingtian', title: '像晴天像雨天', artist: '汪蘇瀧', cat: '熱門華語', bpm: 128, yt: 'sT-wpjhYy-0',
+    cover: { yt: '0t6IzoOkfTA', by: 'Mr.One 木箱鼓' },
+    sections: [['前奏', 'eighth-beat', 4], ['主歌', 'eighth-beat', 16], ['副歌', 'disco', 16], ['過門', 'fill-2beat', 2], ['主歌', 'eighth-beat', 16], ['副歌', 'disco', 16], ['尾奏', 'eighth-beat', 4]] },
+  { id: 'renxing', title: '任性', artist: '五月天', cat: '熱門華語', bpm: 136, yt: '85n8v6D3hNY',
+    cover: { yt: 'h7WmqdT8ES0', by: 'A FU Cajon' },
+    sections: [['前奏', 'rock', 4], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['過門', 'fill-2beat', 2], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['尾奏', 'rock', 4]] },
+  { id: 'kanzhewo', title: '看著我的眼睛說', artist: '張遠', cat: '熱門華語', bpm: 77, yt: 'IkZFVOcahnQ',
+    cover: { yt: 'Ja4jG5Sqqtw', by: 'A FU Cajon' },
     sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'pop-ballad', 4]] },
-  { id: 'juejiang', title: '倔強', artist: '五月天', cat: '華語流行', bpm: 78, yt: 'R2s-H_crYkc',
-    cover: { yt: 'dZnK-oT57-Q', by: '曾阿耀 木箱鼓' },
-    sections: [['前奏', 'pop-ballad', 4], ['主歌', 'pop-ballad', 16], ['導歌', 'ghost-intro', 8], ['過門', 'fill-cresc', 2], ['副歌', 'rock', 16], ['間奏', 'rock', 8], ['副歌', 'rock', 16], ['尾奏', 'pop-ballad', 4]] },
-  { id: 'aini', title: '愛你', artist: '王心凌', cat: '華語流行', bpm: 100, yt: 'NAODcPQcy9U',
-    cover: { yt: 'KtjSDkITOMU', by: 'Mr.One 木箱鼓教學示範' },
-    sections: [['前奏', 'disco', 4], ['主歌', 'pop-mid', 16], ['副歌', 'disco', 16], ['過門', 'fill-2beat', 2], ['主歌', 'pop-mid', 16], ['副歌', 'disco', 16], ['尾奏', 'disco', 4]] },
-  { id: 'norwegian', title: '挪威的森林', artist: '伍佰 & China Blue', cat: '華語流行', bpm: 70, yt: 'gPpZJlE0Ca8',
-    cover: { yt: 'dkkmHKNuLag', by: 'Mr.One 木箱鼓教學示範' },
-    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'rock', 16], ['間奏', 'half-time', 8], ['主歌', 'pop-ballad', 16], ['副歌', 'rock', 16], ['尾奏', 'pop-ballad', 4]] },
-  { id: 'imyours', title: "I'm Yours", artist: 'Jason Mraz', cat: '英文流行', bpm: 76, yt: 'EkHTsc9PU2A',
-    cover: { yt: 'xvlLVkgtyZI', by: 'J3beat Cajon 教學' },
-    sections: [['前奏', 'shuffle', 4], ['主歌', 'shuffle', 16], ['副歌', 'blues-shuffle', 8], ['過門', 'fill-shuffle', 2], ['主歌', 'shuffle', 16], ['副歌', 'blues-shuffle', 8], ['尾奏', 'shuffle', 4]] },
-  { id: 'countonme', title: 'Count on Me', artist: 'Bruno Mars', cat: '英文流行', bpm: 89, yt: '6k8cpUkKK4c',
-    cover: { yt: 'cP_BirBZpBY', by: 'PianoCapretto Cajon' },
-    sections: [['前奏', 'eighth-beat', 4], ['主歌', 'pop-mid', 16], ['副歌', 'soul', 8], ['過門', 'fill-1beat', 2], ['主歌', 'pop-mid', 16], ['副歌', 'soul', 8], ['尾奏', 'eighth-beat', 4]] },
-  { id: 'shapeofyou', title: 'Shape of You', artist: 'Ed Sheeran', cat: '英文流行', bpm: 96, yt: 'JGwWNGJdvx8',
-    cover: { yt: 'SBcdSDm8s8w', by: 'Cajon Master 教學' },
-    sections: [['前奏', 'dembow', 4], ['主歌', 'dembow', 16], ['導歌', 'half-time', 8], ['副歌', 'dembow', 16], ['主歌', 'dembow', 16], ['副歌', 'dembow', 16]] },
-  { id: 'tenthousand', title: '10,000 Reasons', artist: 'Matt Redman', cat: '詩歌', bpm: 73, yt: 'XtwIT8JjddM',
-    cover: { yt: '9hp-1IM2Nuk', by: 'Church Music Box Cajon' },
-    sections: [['前奏', 'basic-beat', 4], ['副歌', 'worship', 8], ['主歌', 'worship', 16], ['副歌', 'eighth-beat', 8], ['主歌', 'worship', 16], ['副歌', 'eighth-beat', 8], ['尾奏', 'basic-beat', 4]] },
-  { id: 'waymaker', title: 'Way Maker', artist: 'Leeland', cat: '詩歌', bpm: 68, yt: 'iJCV_2H9xD0',
-    cover: { yt: '5lZN0o56s98', by: 'Church Music Box Cajon' },
-    sections: [['前奏', 'basic-beat', 4], ['主歌', 'worship', 16], ['副歌', 'eighth-beat', 16], ['橋段', 'ghost-intro', 16], ['過門', 'fill-cresc', 2], ['副歌', 'pop-16', 16]] },
-  { id: 'amazinggrace', title: 'Amazing Grace (My Chains Are Gone)', artist: 'Chris Tomlin', cat: '詩歌', bpm: 63, yt: 'Y-4NFvI5U9w',
-    cover: { yt: '3YWfXubRUCI', by: 'Berlin Praise Team Cajon' },
-    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'worship', 8], ['主歌', 'pop-ballad', 16], ['副歌', 'worship', 8], ['尾奏', 'pop-ballad', 4]] }
+  { id: 'xingfu', title: '幸福在歌唱', artist: 'A-Lin', cat: '熱門華語', bpm: 65, yt: 'jeRu6h4XbUU',
+    cover: { yt: 'IWEk3vO5UMk', by: 'Mr.One 木箱鼓' },
+    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'worship', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'pop-ballad', 4]] },
+  // ---- 神曲（短影音爆紅）
+  { id: 'tiaolouji', title: '跳樓機', artist: 'LBI 利比', cat: '神曲', bpm: 128, yt: 'HegSBovl24I',
+    cover: { yt: 'SkSqJM5PMcc', by: 'Mr.One 木箱鼓' },
+    sections: [['前奏', 'eighth-beat', 4], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['過門', 'fill-1beat', 2], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['尾奏', 'eighth-beat', 4]] },
+  { id: 'haiyuni', title: '海嶼你', artist: '馬也_Crabbit', cat: '神曲', bpm: 75, yt: 'aGlVMnvsSio',
+    cover: { yt: '1ZW7peoDayU', by: '動態鼓譜' },
+    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'pop-ballad', 4]] },
+  { id: 'wozouhou', title: '我走後', artist: 'En', cat: '神曲', bpm: 60, yt: 'EqvAqeaUpRQ',
+    cover: { yt: 'bBdIpJEd-tc', by: 'Mr.One 木箱鼓（小咪版）' },
+    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'eighth-beat', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'eighth-beat', 16], ['尾奏', 'pop-ballad', 4]] }
 ];

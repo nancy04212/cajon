@@ -258,7 +258,9 @@ function prep(g, getBpm) {
 function handsFor(g) {
   const n = g.ts[0] * g.spb;
   if (g.hands) return g.hands.split('');
-  return Array.from({ length: n }, (_, i) => i % 2 ? 'L' : 'R');
+  const used = []; g.bars.forEach(b => b.split('').forEach((c, i) => { if (c !== '.') used.push(i); }));
+  let r = 1; for (const c of [4, 2]) if (g.spb % c === 0 && used.length && used.every(i => i % c === 0)) { r = c; break; }
+  return Array.from({ length: n }, (_, i) => i % r ? '' : ((i / r) % 2 ? 'L' : 'R'));
 }
 function countsFor(g) {
   if (g.counts) return g.counts;
@@ -320,6 +322,31 @@ function sheet(title, html, onMount) {
 function helpSheet(items) {
   sheet('說明', `<div class="helps">${items.map(([t, d]) => `<div><b>${t}</b><p>${d}</p></div>`).join('')}</div><button class="btn primary" style="width:100%;margin-top:16px" data-x>知道了</button>`, (el, close) => $('[data-x]', el).onclick = close);
 }
+function openBpmInput(get, set) {
+  sheet('設定速度', `<input class="input num bpm-input" type="number" inputmode="numeric" min="20" max="300" value="${get()}" aria-label="BPM"><div class="chips quick">${[60, 70, 80, 90, 100, 110, 120, 130].map(b => `<button class="chip" data-b="${b}">${b}</button>`).join('')}</div><button class="btn primary" style="width:100%;margin-top:16px" data-ok>完成</button>`,
+    (el, close) => {
+      const i = $('input', el); setTimeout(() => { i.focus(); i.select(); }, 320);
+      const ok = () => { const v = +i.value; if (v) set(v); close(); };
+      $('[data-ok]', el).onclick = ok; i.onkeydown = e => { if (e.key === 'Enter') ok(); };
+      $('.quick', el).onclick = e => { const b = e.target.closest('[data-b]'); if (b) { set(+b.dataset.b); close(); } };
+    });
+}
+function bpmGesture(el, get, set) {
+  if (!el) return;
+  let x0 = null, y0 = 0, b0 = 0, axis = null, moved = false, last = 0;
+  el.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; b0 = get(); last = b0; axis = null; moved = false; try { el.setPointerCapture(e.pointerId); } catch (_) {} });
+  el.addEventListener('pointermove', e => {
+    if (x0 == null) return;
+    const dx = e.clientX - x0, dy = y0 - e.clientY;
+    if (!axis && Math.hypot(dx, dy) > 6) axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+    if (!axis) return; moved = true;
+    const nb = Math.round(b0 + (axis === 'x' ? dx : dy) / 5);
+    if (nb !== last) { last = nb; set(nb); try { navigator.vibrate && navigator.vibrate(1); } catch (_) {} }
+  });
+  el.addEventListener('pointerup', () => { if (x0 != null && !moved) openBpmInput(get, set); x0 = null; });
+  el.addEventListener('pointercancel', () => { x0 = null; });
+  el.addEventListener('wheel', e => { e.preventDefault(); set(get() + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
+}
 function confirmSheet(title, msg, okLabel, onOk) {
   sheet(title, `<p style="text-align:center;color:var(--text-2);margin:0 0 18px">${esc(msg)}</p><div class="row"><button class="btn" style="flex:1" data-x>取消</button><button class="btn primary" style="flex:1;background:#D70015;color:#fff" data-ok>${esc(okLabel)}</button></div>`,
     (el, close) => { $('[data-x]', el).onclick = close; $('[data-ok]', el).onclick = () => { close(); onOk(); }; });
@@ -380,7 +407,7 @@ function viewMetro(v) {
       <div class="tempo-name" id="tname"></div>
       <div class="bpm-row">
         <button class="round-btn" id="bm" aria-label="減速">${I.minus}</button>
-        <div><div class="bpm-big num" id="bpmBig" ${DESKTOP ? 'title="上下拖曳或滾輪調整"' : ''}></div><div class="bpm-unit">BPM</div></div>
+        <div class="bpm-touch" id="bpmTouch"><div class="bpm-big num" id="bpmBig"></div><div class="bpm-unit">‹ BPM ›</div></div>
         <button class="round-btn" id="bp" aria-label="加速">${I.plus}</button>
       </div>
       <input type="range" min="20" max="300" id="bpmR" aria-label="速度">
@@ -414,11 +441,7 @@ function viewMetro(v) {
   r.oninput = () => setBpm(+r.value);
   holdRepeat($('#bm', v), () => setBpm(S.bpm - 1)); holdRepeat($('#bp', v), () => setBpm(S.bpm + 1));
   // drag on number
-  let dy = null, b0 = 0;
-  big.addEventListener('pointerdown', e => { dy = e.clientY; b0 = S.bpm; big.setPointerCapture(e.pointerId); });
-  big.addEventListener('pointermove', e => { if (dy != null) setBpm(b0 + (dy - e.clientY) / 4); });
-  big.addEventListener('pointerup', () => dy = null);
-  big.addEventListener('wheel', e => { e.preventDefault(); setBpm(S.bpm + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
+  bpmGesture($('#bpmTouch', v), () => S.bpm, setBpm);
   const beatsEl = $('#beats', v);
   const drawBeats = () => { beatsEl.innerHTML = S.accents.map((l, i) => `<button class="beat" data-l="${l}" data-i="${i}" aria-label="第${i + 1}拍"><span class="n">${i + 1}</span><span class="fill"></span></button>`).join(''); };
   drawBeats();
@@ -498,7 +521,7 @@ function viewGroove(v, id) {
   <div class="dock">
     <div class="dock-main">
       <button class="play-lg" data-play="${esc(owner)}" aria-label="播放"></button>
-      <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div><div class="v num" id="bv"></div><div class="u">BPM</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
+      <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
       <input type="range" class="slider" min="30" max="260" id="br" aria-label="速度">
     </div>
     <div class="toggles">
@@ -519,7 +542,7 @@ function viewGroove(v, id) {
   trs.onclick = () => { if (!S.gTrMax) S.gTrMax = g.range ? g.range[1] : bpm + 30; numSheet('速度訓練', [['每幾次循環', 'gTrEvery', 1, 32], ['每次加速 BPM', 'gTrStep', 1, 20], ['目標 BPM', 'gTrMax', 40, 300]], () => { S.gTrainer = true; upTr(); syncT(); }); };
   refreshPlayerBpm = () => { if (!bv.isConnected) return; bv.textContent = bpm; br.value = bpm; setRangeFill(br); };
   const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); S.gBpm[id] = bpm; saveS(); refreshPlayerBpm(); };
-  refreshPlayerBpm(); upTr(); adjBpm = dd => setBpm(bpm + dd);
+  refreshPlayerBpm(); upTr(); adjBpm = dd => setBpm(bpm + dd); bpmGesture($('#bvw', v), () => bpm, setBpm);
   br.oninput = () => setBpm(+br.value);
   holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
   const syncT = () => $$('.tg[data-t]', v).forEach(b => b.classList.toggle('on', !!S[b.dataset.t]));
@@ -563,7 +586,7 @@ function viewEditor(v, id) {
   <div class="dock">
     <div class="dock-main">
       <button class="play-lg" data-play="${owner}" aria-label="播放"></button>
-      <div class="bpm-mini"><button class="icon-btn" id="m">${I.minus}</button><div><div class="v num" id="bv"></div><div class="u">BPM</div></div><button class="icon-btn" id="p">${I.plus}</button></div>
+      <div class="bpm-mini"><button class="icon-btn" id="m">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p">${I.plus}</button></div>
       <div style="flex:1"></div>
       ${d.id ? `<button class="icon-btn" id="del" aria-label="刪除">${I.trash}</button>` : ''}
       <button class="btn primary" id="save">儲存</button>
@@ -592,7 +615,7 @@ function viewEditor(v, id) {
   $('#clr', v).onclick = () => { d.bars = d.bars.map(() => '.'.repeat(n())); draw(); restart(); };
   $('#nm', v).oninput = e => d.name = e.target.value;
   const bv = $('#bv', v); const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); d.bpm = bpm; bv.textContent = bpm; };
-  setBpm(bpm); adjBpm = dd => setBpm(bpm + dd); holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
+  setBpm(bpm); adjBpm = dd => setBpm(bpm + dd); bpmGesture($('#bvw', v), () => bpm, setBpm); holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
   const play = () => start('groove', owner, { groove: prep(d, () => bpm) });
   $('[data-play]', v).onclick = () => A.playing && A.owner === owner ? stop() : play();
   $('#save', v).onclick = () => {
@@ -696,7 +719,7 @@ function viewSong(v, id) {
   <div class="dock">
     <div class="dock-main">
       <button class="play-lg" data-play="${esc(owner)}" aria-label="播放">${I.play}</button>
-      <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div><div class="v num" id="bv"></div><div class="u">BPM</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
+      <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
       <input type="range" class="slider" min="30" max="260" id="br" aria-label="速度">
     </div>
     <div class="toggles" id="appToggles">
@@ -730,7 +753,7 @@ function viewSong(v, id) {
   // BPM
   const bv = $('#bv', v), br = $('#br', v);
   const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); S.sBpm[id] = bpm; saveS(); bv.textContent = bpm; br.value = bpm; setRangeFill(br); };
-  setBpm(bpm); adjBpm = d => setBpm(bpm + d);
+  setBpm(bpm); adjBpm = d => setBpm(bpm + d); bpmGesture($('#bvw', v), () => bpm, setBpm);
   br.oninput = () => setBpm(+br.value);
   holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
   // toggles
@@ -826,7 +849,7 @@ function viewSongEdit(v, id) {
     <label>歌手</label><input class="input" id="fA" value="${esc(d.artist || '')}" placeholder="例如：周杰倫">
     <label>YouTube 連結</label><input class="input" id="fY" value="${d.yt ? ytWatch(d.yt) : ''}" placeholder="貼上影片網址" inputmode="url">
     <label>木箱鼓示範（選填）</label><input class="input" id="fC" value="${d.cover?.yt ? ytWatch(d.cover.yt) : ''}" placeholder="貼上示範影片網址" inputmode="url">
-    <label>速度</label><div class="row"><div class="bpm-mini"><button class="icon-btn" id="m">${I.minus}</button><div><div class="v num" id="bv">${d.bpm}</div><div class="u">BPM</div></div><button class="icon-btn" id="p">${I.plus}</button></div><button class="btn sm" id="tapB" style="margin-left:auto">TAP 測速</button></div>
+    <label>速度</label><div class="row"><div class="bpm-mini"><button class="icon-btn" id="m">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv">${d.bpm}</div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p">${I.plus}</button></div><button class="btn sm" id="tapB" style="margin-left:auto">TAP 測速</button></div>
   </div>
   <div class="section-t">段落</div>
   <div class="list" id="secList"></div>
@@ -849,7 +872,7 @@ function viewSongEdit(v, id) {
   });
   $('#addSec', v).onclick = () => { const lastS = d.sections[d.sections.length - 1]; d.sections.push(['副歌', lastS ? lastS[1] : 'pop-mid', 8]); drawSecs(); };
   const bv = $('#bv', v); const setB = b => { d.bpm = clamp(Math.round(b), 30, 260); bv.textContent = d.bpm; };
-  holdRepeat($('#m', v), () => setB(d.bpm - 1)); holdRepeat($('#p', v), () => setB(d.bpm + 1));
+  holdRepeat($('#m', v), () => setB(d.bpm - 1)); holdRepeat($('#p', v), () => setB(d.bpm + 1)); bpmGesture($('#bvw', v), () => d.bpm, setB);
   $('#tapB', v).onclick = () => { const b = tapper.tap(); if (b) setB(b); };
   $('#saveS', v).onclick = () => {
     d.title = $('#fT', v).value.trim(); d.artist = $('#fA', v).value.trim();
