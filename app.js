@@ -255,9 +255,17 @@ function prep(g, getBpm) {
   const beats = g.ts[0], spb = g.spb;
   return { flat, beats, spb, getBpm };
 }
+// 自動判斷手順：不密集、以低音/響音為主的節奏用「分手」（右手低音、左手高音），其餘左右交替
+function useSplit(g) {
+  if (g._split !== undefined) return g._split;
+  const used = [], all = g.bars.join(''); g.bars.forEach(b => b.split('').forEach((c, i) => { if (c !== '.') used.push(i); }));
+  const coarse = g.spb % 2 === 0 && used.length && used.every(i => i % 2 === 0);
+  const main = (all.match(/[BST]/g) || []).length, ghost = (all.match(/s/g) || []).length;
+  return (g._split = !g.hands && g.cat !== 'fill' && coarse && ghost < main);
+}
 function handsFor(g, bar) {
   const n = g.ts[0] * g.spb;
-  if (S.hands === 'split' && bar) return splitHands(bar, g.spb);
+  if (bar && useSplit(g)) return splitHands(bar, g.spb);
   if (g.hands) return g.hands.split('');
   const used = []; g.bars.forEach(b => b.split('').forEach((c, i) => { if (c !== '.') used.push(i); }));
   let r = 1; for (const c of [4, 2]) if (g.spb % c === 0 && used.length && used.every(i => i % c === 0)) { r = c; break; }
@@ -274,12 +282,6 @@ function splitHands(bar, spb) {
   }
   return out;
 }
-function refreshHands() {
-  $$('.bars').forEach(el => { const g = el._g; if (!g) return; const n = g.ts[0] * g.spb; const alt = handsFor(g);
-    g.bars.forEach((bar, bi) => { const hs = S.hands === 'split' ? handsFor(g, bar) : alt; for (let s = 0; s < n; s++) { const h = el.querySelector(`.col[data-i="${bi * n + s}"] .h`); if (h) h.textContent = hs[s]; } }); });
-  $$('.hand-sw').forEach(b => b.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.h === (S.hands || 'alt'))));
-}
-document.addEventListener('click', e => { const b = e.target.closest('.hand-sw button'); if (!b) return; S.hands = b.dataset.h; saveS(); refreshHands(); toast(S.hands === 'split' ? '分手：右手低音、左手高音' : '交替：左右手輪流'); });
 function countsFor(g) {
   if (g.counts) return g.counts;
   const per = COUNTS[g.spb] || COUNTS[4];
@@ -299,8 +301,7 @@ const legendHtml = () => `<div class="legend">
   <span><i class="k" style="background:var(--c-T);color:var(--on-T)">T</i>中音 Tone</span>
   <span><i class="k" style="background:var(--c-S);color:var(--on-S)">S</i>響音 Slap</span>
   <span><i class="k" style="color:var(--c-g);box-shadow:inset 0 0 0 1.5px var(--c-g)">s</i>鬼音 Ghost</span>
-  <span><b style="color:var(--text)">R / L</b>&nbsp;右手 / 左手</span>
-  <span class="hand-sw" role="group" aria-label="手順">手順<button data-h="alt" class="${(S.hands || 'alt') === 'alt' ? 'on' : ''}">交替</button><button data-h="split" class="${S.hands === 'split' ? 'on' : ''}">分手</button></span></div>`;
+  <span><b style="color:var(--text)">R / L</b>&nbsp;右手 / 左手</span></div>`;
 
 let curGrid = null;
 function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
@@ -310,7 +311,7 @@ function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
   el.className = 'bars' + (g.bars.length > 1 && n <= 16 ? ' two' : '');
   el._g = g;
   g.bars.forEach((bar, bi) => {
-    const hs = S.hands === 'split' ? handsFor(g, bar) : hands;
+    const hs = useSplit(g) ? handsFor(g, bar) : hands;
     const bd = document.createElement('div'); bd.className = 'bar' + (n > 16 ? ' wide' : '');
     let h = `<div class="bn">第 ${bi + 1} 小節</div><div class="row-g">`;
     const grpSize = g.counts ? 2 : g.spb; // bulerías: group per count
@@ -318,7 +319,7 @@ function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
       if (s % grpSize === 0) h += (s ? '</div>' : '') + '<div class="grp">';
       const c = bar[s]; const idx = bi * n + s;
       const cnt = counts[s]; const isBeat = s % g.spb === 0;
-      h += `<div class="col${editable ? ' edit' : ''}" data-i="${idx}"><div class="n ${c === '.' ? 'r' : c}">${c === '.' ? '·' : c}</div><div class="c${isBeat ? '' : ' off'}">${esc(cnt)}</div><div class="h">${hs[s]}</div></div>`;
+      h += `<div class="col${editable ? ' edit' : ''}${s && s % grpSize === 0 ? ' g0' : ''}" data-i="${idx}"><div class="n ${c === '.' ? 'r' : c}">${c === '.' ? '·' : c}</div><div class="c${isBeat ? '' : ' off'}">${esc(cnt)}</div><div class="h">${hs[s]}</div></div>`;
     }
     h += '</div></div>';
     bd.innerHTML = h; el.appendChild(bd);
@@ -429,8 +430,7 @@ function viewMetro(v) {
         <div class="bpm-touch" id="bpmTouch"><div class="bpm-big num" id="bpmBig"></div><div class="bpm-unit">‹ BPM ›</div></div>
         <button class="round-btn" id="bp" aria-label="加速">${I.plus}</button>
       </div>
-      <input type="range" min="20" max="300" id="bpmR" aria-label="速度">
-      <div class="beats" id="beats"></div>
+      <div class="nbeats" id="beats"></div>
       <div class="beat-hint" id="gapState"></div>
       <button class="play-xl" data-play="metro" aria-label="播放"></button>
     </div>
@@ -454,11 +454,10 @@ function viewMetro(v) {
       </details>
     </div>
   </div>`;
-  const big = $('#bpmBig', v), r = $('#bpmR', v);
-  refreshBpm = () => { if (!big.isConnected) return; big.textContent = S.bpm; r.value = S.bpm; setRangeFill(r); $('#tname').textContent = tempoName(S.bpm); $$('#presets .chip').forEach(c => c.classList.toggle('on', +c.dataset.b === S.bpm)); };
+  const big = $('#bpmBig', v);
+  refreshBpm = () => { if (!big.isConnected) return; big.textContent = S.bpm; $('#tname').textContent = tempoName(S.bpm); $$('#presets .chip').forEach(c => c.classList.toggle('on', +c.dataset.b === S.bpm)); };
   const setBpm = b => { S.bpm = clamp(Math.round(b), 20, 300); refreshBpm(); saveS(); };
   refreshBpm();
-  r.oninput = () => setBpm(+r.value);
   holdRepeat($('#bm', v), () => setBpm(S.bpm - 1)); holdRepeat($('#bp', v), () => setBpm(S.bpm + 1));
   // drag on number
   bpmGesture($('#bpmTouch', v), () => S.bpm, setBpm);
@@ -541,7 +540,6 @@ function viewGroove(v, id) {
     <div class="dock-main">
       <button class="play-lg" data-play="${esc(owner)}" aria-label="播放"></button>
       <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
-      <input type="range" class="slider" min="30" max="260" id="br" aria-label="速度">
     </div>
     <div class="toggles">
       <button class="tg" data-t="gDrum">${I.drum}鼓聲</button>
@@ -554,14 +552,13 @@ function viewGroove(v, id) {
     <div class="trainer-status" id="trs"></div>
   </div>`;
   curGrid = renderGrid($('#grid', v), g);
-  const bv = $('#bv', v), br = $('#br', v);
+  const bv = $('#bv', v);
   const trs = $('#trs', v);
   const upTr = () => { trs.classList.toggle('show', S.gTrainer); const mx = S.gTrMax || (g.range ? g.range[1] : bpm + 30); trs.textContent = `每 ${S.gTrEvery} 次循環 +${S.gTrStep}，至 ${mx} BPM・點此設定`; };
   trs.onclick = () => { if (!S.gTrMax) S.gTrMax = g.range ? g.range[1] : bpm + 30; numSheet('速度訓練', [['每幾次循環', 'gTrEvery', 1, 32], ['每次加速 BPM', 'gTrStep', 1, 20], ['目標 BPM', 'gTrMax', 40, 300]], () => { S.gTrainer = true; upTr(); syncT(); }); };
-  refreshPlayerBpm = () => { if (!bv.isConnected) return; bv.textContent = bpm; br.value = bpm; setRangeFill(br); };
+  refreshPlayerBpm = () => { if (!bv.isConnected) return; bv.textContent = bpm; };
   const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); S.gBpm[id] = bpm; saveS(); refreshPlayerBpm(); };
   refreshPlayerBpm(); upTr(); adjBpm = dd => setBpm(bpm + dd); bpmGesture($('#bvw', v), () => bpm, setBpm);
-  br.oninput = () => setBpm(+br.value);
   holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
   const syncT = () => $$('.tg[data-t]', v).forEach(b => b.classList.toggle('on', !!S[b.dataset.t]));
   syncT();
@@ -705,7 +702,7 @@ function viewSong(v, id) {
       <div class="yt-box" id="yt"></div>` : `<div class="card empty" style="padding:24px">這首沒有影片</div>`}
       <div class="card now" id="now">
         <div class="now-top"><b id="nowSec"></b><span class="pill" id="nowState"></span><span class="now-bar num" id="nowBar"></span></div>
-        <div class="beats" id="beats"></div>
+        <div class="nbeats" id="beats"></div>
         <div class="now-sub" id="nowSub"></div>
         <div class="rest-bar"><i id="nowP"></i></div>
       </div>
@@ -722,7 +719,7 @@ function viewSong(v, id) {
       </div>` : ''}
     </div>
   </div>
-  <div class="dock">
+  <div class="dock song-dock">
     <div class="dock-main">
       <button class="play-lg" id="play" aria-label="播放">${I.play}</button>
       <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
