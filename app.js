@@ -46,7 +46,7 @@ const S = Object.assign({
   theme: 'auto', bpm: 90, ts: [4, 4], sub: '1', sound: 'wood', accents: [3, 2, 2, 2], vol: 0.85,
   trainer: false, trStep: 5, trEvery: 4, trMax: 140, gap: false, gapPlay: 2, gapMute: 2,
   gClick: true, gDrum: true, gCount: true, gSwing: 0, gTrainer: false, gTrStep: 3, gTrEvery: 4, gTrMax: 0,
-  drumVol: 1, clickVol: 0.55, gBpm: {}
+  drumVol: 1, clickVol: 0.55, gBpm: {}, hands: 'alt'
 }, store.get('settings', {}));
 const saveS = () => store.set('settings', S);
 let favs = new Set(store.get('favs', []));
@@ -255,13 +255,31 @@ function prep(g, getBpm) {
   const beats = g.ts[0], spb = g.spb;
   return { flat, beats, spb, getBpm };
 }
-function handsFor(g) {
+function handsFor(g, bar) {
   const n = g.ts[0] * g.spb;
+  if (S.hands === 'split' && bar) return splitHands(bar, g.spb);
   if (g.hands) return g.hands.split('');
   const used = []; g.bars.forEach(b => b.split('').forEach((c, i) => { if (c !== '.') used.push(i); }));
   let r = 1; for (const c of [4, 2]) if (g.spb % c === 0 && used.length && used.every(i => i % c === 0)) { r = c; break; }
   return Array.from({ length: n }, (_, i) => i % r ? '' : ((i / r) % 2 ? 'L' : 'R'));
 }
+// 分手：右手低音、左手高音；鬼音和來不及的音由另一手補
+function splitHands(bar, spb) {
+  const out = []; let last = '', lastI = -9;
+  for (let i = 0; i < bar.length; i++) {
+    const c = bar[i]; if (c === '.') { out.push(''); continue; }
+    let h = c === 'B' ? 'R' : (c === 'S' || c === 'T') ? 'L' : (last === 'R' ? 'L' : 'R');
+    if (h === last && i - lastI === 1 && spb >= 4) h = h === 'R' ? 'L' : 'R';
+    out.push(h); last = h; lastI = i;
+  }
+  return out;
+}
+function refreshHands() {
+  $$('.bars').forEach(el => { const g = el._g; if (!g) return; const n = g.ts[0] * g.spb; const alt = handsFor(g);
+    g.bars.forEach((bar, bi) => { const hs = S.hands === 'split' ? handsFor(g, bar) : alt; for (let s = 0; s < n; s++) { const h = el.querySelector(`.col[data-i="${bi * n + s}"] .h`); if (h) h.textContent = hs[s]; } }); });
+  $$('.hand-sw').forEach(b => b.querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.h === (S.hands || 'alt'))));
+}
+document.addEventListener('click', e => { const b = e.target.closest('.hand-sw button'); if (!b) return; S.hands = b.dataset.h; saveS(); refreshHands(); toast(S.hands === 'split' ? '分手：右手低音、左手高音' : '交替：左右手輪流'); });
 function countsFor(g) {
   if (g.counts) return g.counts;
   const per = COUNTS[g.spb] || COUNTS[4];
@@ -281,7 +299,8 @@ const legendHtml = () => `<div class="legend">
   <span><i class="k" style="background:var(--c-T);color:var(--on-T)">T</i>中音 Tone</span>
   <span><i class="k" style="background:var(--c-S);color:var(--on-S)">S</i>響音 Slap</span>
   <span><i class="k" style="color:var(--c-g);box-shadow:inset 0 0 0 1.5px var(--c-g)">s</i>鬼音 Ghost</span>
-  <span><b style="color:var(--text)">R / L</b>&nbsp;右手 / 左手</span></div>`;
+  <span><b style="color:var(--text)">R / L</b>&nbsp;右手 / 左手</span>
+  <span class="hand-sw" role="group" aria-label="手順">手順<button data-h="alt" class="${(S.hands || 'alt') === 'alt' ? 'on' : ''}">交替</button><button data-h="split" class="${S.hands === 'split' ? 'on' : ''}">分手</button></span></div>`;
 
 let curGrid = null;
 function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
@@ -289,7 +308,9 @@ function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
   const cols = [];
   el.innerHTML = '';
   el.className = 'bars' + (g.bars.length > 1 && n <= 16 ? ' two' : '');
+  el._g = g;
   g.bars.forEach((bar, bi) => {
+    const hs = S.hands === 'split' ? handsFor(g, bar) : hands;
     const bd = document.createElement('div'); bd.className = 'bar' + (n > 16 ? ' wide' : '');
     let h = `<div class="bn">第 ${bi + 1} 小節</div><div class="row-g">`;
     const grpSize = g.counts ? 2 : g.spb; // bulerías: group per count
@@ -297,7 +318,7 @@ function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
       if (s % grpSize === 0) h += (s ? '</div>' : '') + '<div class="grp">';
       const c = bar[s]; const idx = bi * n + s;
       const cnt = counts[s]; const isBeat = s % g.spb === 0;
-      h += `<div class="col${editable ? ' edit' : ''}" data-i="${idx}"><div class="n ${c === '.' ? 'r' : c}">${c === '.' ? '·' : c}</div><div class="c${isBeat ? '' : ' off'}">${esc(cnt)}</div><div class="h">${hands[s]}</div></div>`;
+      h += `<div class="col${editable ? ' edit' : ''}" data-i="${idx}"><div class="n ${c === '.' ? 'r' : c}">${c === '.' ? '·' : c}</div><div class="c${isBeat ? '' : ' off'}">${esc(cnt)}</div><div class="h">${hs[s]}</div></div>`;
     }
     h += '</div></div>';
     bd.innerHTML = h; el.appendChild(bd);
@@ -635,16 +656,32 @@ let CHART = store.get('chart', { updated: '', items: [] });
 const chartSongs = () => (CHART.items || []).map(it => {
   const src = it.sources || [];
   const m = Object.assign({}, SONG_META[it.title] || {}, SONG_META[it.yt] || {});
-  return { id: it.yt, rank: it.rank, sources: src, title: m.title || it.title, artist: m.artist || it.artist, cat: '本月排行', yt: it.yt, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: m.cover || null, sections: m.sections || SONG_DEFAULT_SECTIONS };
+  return { id: it.yt, rank: it.rank, sources: src, title: m.title || it.title, artist: m.artist || it.artist, cat: '本月排行', yt: it.yt, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: m.cover || null, sections: m.sections || SONG_DEFAULT_SECTIONS, metaSecs: !!m.sections };
 });
 let COVERS = store.get('covers', { items: [] });
+let DRUMS = store.get('drums', { items: {} });
+fetch('drums.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = Object.keys(j.items || {}).length !== Object.keys(DRUMS.items || {}).length; DRUMS = j; store.set('drums', j); if (changed && route && route.name === 'songs') render(); }).catch(() => {});
+// 依 A FU 鼓譜判讀的「有鼓時段」（秒）換算成段落；速度改變時重算
+function drumSections(song, bpm) {
+  const d = song.drums, bar = 240 / bpm, out = [];
+  const grooves = (song.metaSecs ? song.sections : []).map(s => s[1]).filter(x => x !== 'rest' && !/^fill/.test(x));
+  const main = grooves.length ? grooves.sort((a, b) => grooves.filter(x => x === b).length - grooves.filter(x => x === a).length)[0] : bpm < 88 ? 'pop-ballad' : bpm < 112 ? 'pop-mid' : 'eighth-beat';
+  let t = 0, n = 0; const end = d.len;
+  d.on.forEach(([s, e], i) => {
+    const r = Math.round((s - t) / bar); if (r > 0) out.push([i === 0 ? '開頭' : '中段', 'rest', r]);
+    let b = Math.max(1, Math.round((e - s) / bar)); while (b > 0) { const k = b > 12 ? 8 : b; out.push([`段落 ${++n}`, main, k]); b -= k; }
+    t = e;
+  });
+  const r = Math.round((end - t) / bar); if (r > 0) out.push(['結尾', 'rest', r]);
+  return out;
+}
 const normT = s => String(s || '').toLowerCase().replace(/[\s·・,，.。!！?？'"“”‘’()（）\[\]【】\-]/g, '');
 const coverMap = () => { const m = new Map(); for (const c of COVERS.items || []) { const k = normT(c.song); if (!m.has(k)) m.set(k, c); } return m; };
 const afuSongs = () => (COVERS.items || []).map(c => {
   const m = Object.assign({}, SONG_META[c.song] || {}, SONG_META[c.yt] || {});
-  return { id: c.yt, title: m.title || c.song, artist: m.artist || c.artist, cat: 'cover', yt: c.yt, coverOnly: true, coverBy: c.by, sheet: c.sheet, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: null, sections: m.sections || SONG_DEFAULT_SECTIONS };
+  return { id: c.yt, title: m.title || c.song, artist: m.artist || c.artist, cat: 'cover', yt: c.yt, coverOnly: true, coverBy: c.by, sheet: c.sheet, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: null, sections: m.sections || SONG_DEFAULT_SECTIONS, metaSecs: !!m.sections, drums: DRUMS.items[c.yt] || null };
 });
-const allSongs = () => { const cm = coverMap(); const ch = chartSongs().map(s => { if (!s.cover) { const c = cm.get(normT(s.title)); if (c) s.cover = { yt: c.yt, by: c.by + (c.sheet ? '（附鼓譜）' : '') }; } return s; }); return [...songCustoms, ...ch, ...afuSongs()]; };
+const allSongs = () => { const cm = coverMap(); const ch = chartSongs().map(s => { if (!s.cover) { const c = cm.get(normT(s.title)); if (c) s.cover = { yt: c.yt, by: c.by + (c.sheet ? '（附鼓譜）' : '') }; } const af = cm.get(normT(s.title)); if (af && DRUMS.items[af.yt] && !(s.cover && DRUMS.items[s.cover.yt])) s.cover = { yt: af.yt, by: af.by + '（附鼓譜）' }; s.drums = (s.cover && DRUMS.items[s.cover.yt]) || null; return s; }); return [...songCustoms, ...ch, ...afuSongs()]; };
 fetch('covers.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = (j.items || []).length !== (COVERS.items || []).length; COVERS = j; store.set('covers', j); if (changed && route && route.name === 'songs') render(); }).catch(() => {});
 fetch('charts.json', { cache: 'no-cache' }).then(r => r.json()).then(j => {
   const changed = JSON.stringify(j.items) !== JSON.stringify(CHART.items);
@@ -655,9 +692,10 @@ const findSong = id => allSongs().find(s => s.id === id);
 const ytThumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 const ytWatch = id => `https://www.youtube.com/watch?v=${id}`;
 function parseYT(u) { u = String(u || '').trim(); if (!u) return ''; const m = u.match(/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/|live\/)([\w-]{11})/); return m ? m[1] : (/^[\w-]{11}$/.test(u) ? u : ''); }
-function songPlan(song) {
+function songPlan(song, bpm) {
   const secs = []; let beat = 0;
-  song.sections.forEach(([name, gid, bars], i) => {
+  const list = song.drums && !song.custom && song.drums.on.length ? drumSections(song, bpm || song.bpm) : song.sections;
+  list.forEach(([name, gid, bars], i) => {
     const g = findGroove(gid) || findGroove('basic-beat');
     const n = g.ts[0] * g.spb, pat = g.bars.join('');
     secs.push({ i, name, g, bars, n, pat, beats: bars * g.ts[0], startBeat: beat, steps: bars * n });
@@ -716,10 +754,14 @@ function viewSongs(v) {
 function viewSong(v, id) {
   const song = findSong(id);
   if (!song) { v.innerHTML = `<div class="empty">找不到這首歌<br><br><button class="btn" onclick="location.hash='songs'">回歌曲</button></div>`; return; }
-  const owner = 's:' + id, plan = songPlan(song), last = plan.secs.length - 1;
   S.sBpm = S.sBpm || {};
+  const planBpm = S.sBpm[id] || song.bpm, owner = 's:' + id, plan = songPlan(song, planBpm), last = plan.secs.length - 1;
   let bpm = S.sBpm[id] || song.bpm, mode = song.yt ? 'video' : 'app', src = 'orig', sel = 0, loopOn = false, curSec = -1, gmap = null, G = null;
-  let offset = songSync[id] ?? 0;
+  const afuTL = () => !!song.drums && (src === 'cover' || song.coverOnly);
+  const offKey = () => id + (src === 'cover' ? '@c' : '');
+  const autoOff = () => { if (!afuTL() || !song.drums.on.length) return 0; const bar = 240 / bpm, s0 = song.drums.on[0][0]; return Math.round((s0 - Math.round(s0 / bar) * bar) * 100) / 100; };
+  const curOff = () => songSync[offKey()] ?? autoOff();
+  let offset = curOff();
   v.innerHTML = `
   <div class="hd"><button class="icon-btn" onclick="history.length>1?history.back():location.hash='songs'" aria-label="返回">${I.back}</button>
     <div class="grow ph-title"><b>${esc(song.title)}</b><small>${esc(song.artist || '')}</small></div>
@@ -739,7 +781,8 @@ function viewSong(v, id) {
         <div class="row" style="margin-top:10px"><button class="btn primary" id="tapSync" style="flex:1">${I.target}對齊這一拍</button><button class="btn" id="tapS">TAP</button>
           <div class="stepper"><button id="offM" aria-label="提早">−</button><span class="num" id="offV"></span><button id="offP" aria-label="延後">+</button></div></div>
       </div>
-      <div class="section-t">段落</div>
+      ${song.drums && song.drums.buy ? `<a class="btn buy" href="${esc(song.drums.buy)}" target="_blank" rel="noopener">${I.song}購買完整鼓譜（A FU）</a>` : ''}
+      <div class="section-t">段落${song.drums && !song.custom ? '<small>依 A FU 鼓譜判斷有鼓、無鼓</small>' : ''}</div>
       <div class="secs" id="secs">${plan.secs.map((s, k) => `<button class="secchip${s.g.id === 'rest' ? ' rest' : ''}" data-k="${k}"><b>${esc(s.name)}</b><small class="num">${s.g.id === 'rest' ? '無鼓・' : ''}${s.bars} 小節</small></button>`).join('')}</div>
     </div>
   </div>
@@ -794,7 +837,7 @@ function viewSong(v, id) {
   showSec(0);
   // BPM
   const bv = $('#bv', v), br = $('#br', v);
-  const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); S.sBpm[id] = bpm; saveS(); bv.textContent = bpm; br.value = bpm; setRangeFill(br); };
+  const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); S.sBpm[id] = bpm; saveS(); bv.textContent = bpm; br.value = bpm; setRangeFill(br); if (song.drums && !song.custom && bpm !== planBpm) { clearTimeout(window._rp); window._rp = setTimeout(() => { if (!A.playing && route && route.name === 'song') render(); }, 800); } };
   setBpm(bpm); adjBpm = d => setBpm(bpm + d); bpmGesture($('#bvw', v), () => bpm, setBpm);
   br.oninput = () => setBpm(+br.value);
   holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
@@ -807,7 +850,7 @@ function viewSong(v, id) {
   // offset
   const offV = $('#offV', v);
   const showOff = () => { if (offV) offV.textContent = (offset >= 0 ? '' : '−') + Math.abs(offset).toFixed(2) + 's'; };
-  const saveOff = () => { songSync[id] = Math.round(offset * 100) / 100; store.set('songSync', songSync); showOff(); };
+  const saveOff = () => { songSync[offKey()] = Math.round(offset * 100) / 100; store.set('songSync', songSync); showOff(); };
   showOff();
   if (song.yt) {
     holdRepeat($('#offM', v), () => { offset -= 0.05; saveOff(); });
@@ -834,6 +877,7 @@ function viewSong(v, id) {
     const box = $('#yt', v); if (!box) return;
     const vid = src === 'cover' ? song.cover.yt : song.yt;
     const cb = $('#coverBy', v); if (cb) cb.style.display = src === 'cover' ? '' : 'none';
+    offset = curOff(); showOff && showOff();
     box.innerHTML = `<div class="yt-ph"><img src="${ytThumb(vid)}" alt="" onerror="this.remove()"><span>載入影片中…</span></div>`;
     const ok = await loadYT();
     if (!box.isConnected) return;
@@ -844,7 +888,7 @@ function viewSong(v, id) {
         const playing = e.data === 1;
         if (mode === 'video') playBtn.innerHTML = playing ? I.stop : I.play;
         cancelAnimationFrame(ytRaf);
-        if (playing && mode === 'video' && src === 'orig') { practice.start(); syncLoop(); } else practice.stop();
+        if (playing && mode === 'video') { practice.start(); syncLoop(); } else practice.stop();
       } } });
   }
   function syncLoop() {
@@ -994,6 +1038,7 @@ document.addEventListener('keydown', e => {
   } else if (e.key === 't' || e.key === 'T') { ($('#tap') || $('#tapG'))?.click(); }
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && A.playing) keepAwake(true); });
+window.__cajonDebug = () => ({ allSongs, songPlan, drumSections, findGroove, DRUMS, S });
 shell(); render();
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.CAJON_NO_SW) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
