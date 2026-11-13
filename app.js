@@ -685,7 +685,7 @@ function viewSong(v, id) {
   if (!song) { v.innerHTML = `<div class="empty">找不到這首歌<br><br><button class="btn" onclick="location.hash='songs'">回歌曲</button></div>`; return; }
   S.sBpm = S.sBpm || {};
   const planBpm = S.sBpm[id] || song.bpm, plan = songPlan(song, planBpm);
-  let bpm = planBpm, src = song.cover ? 'cover' : 'orig', sel = 0, loopOn = false, curSec = -1, lastKey = '';
+  let bpm = planBpm, src = song.cover ? 'cover' : 'orig', sel = 0, loopOn = false, curSec = -1, lastKey = '', everPlayed = false;
   const afuTL = () => !!song.drums && (src === 'cover' || song.coverOnly);
   const offKey = () => id + (src === 'cover' ? '@c' : '');
   const autoOff = () => { if (!afuTL() || !song.drums.on.length) return 0; const bar = 240 / bpm, s0 = song.drums.on[0][0]; return Math.round((s0 - Math.round(s0 / bar) * bar) * 100) / 100; };
@@ -781,10 +781,11 @@ function viewSong(v, id) {
     const ok = await loadYT();
     if (!box.isConnected) return;
     if (!ok) { box.innerHTML = `<a class="yt-ph" href="${ytWatch(vid)}" target="_blank" rel="noopener"><img src="${ytThumb(vid)}" alt="" onerror="this.remove()"><span>${I.yt}此處無法內嵌・點此在 YouTube 開啟</span></a>`; return; }
-    box.innerHTML = '<div id="ytp"></div><div class="yt-shield" aria-hidden="true"></div>';
+    box.innerHTML = '<div id="ytp"></div><div class="yt-shield" aria-hidden="true"></div><div class="yt-tap" hidden>點一下影片開始播放</div>';
     ytPlayer = new YT.Player('ytp', { videoId: vid, host: 'https://www.youtube-nocookie.com', playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3 },
       events: { onStateChange: e => {
         const playing = e.data === 1;
+        if (playing) { everPlayed = true; const tp = $('.yt-tap', v), sh = $('.yt-shield', v); if (tp) tp.hidden = true; if (sh) sh.style.display = ''; }
         playBtn.innerHTML = playing ? I.stop : I.play; playBtn.setAttribute('aria-label', playing ? '暫停' : '播放');
         cancelAnimationFrame(ytRaf);
         if (playing) { practice.start(); syncLoop(); } else practice.stop();
@@ -808,7 +809,10 @@ function viewSong(v, id) {
   playBtn.onclick = () => {
     if (!song.yt) { toast('這首沒有影片'); return; }
     if (!ytPlayer || !ytPlayer.getPlayerState) { const a = $('#yt a', v); if (a) a.click(); return; }
-    ytPlayer.getPlayerState() === 1 ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
+    if (ytPlayer.getPlayerState() === 1) { ytPlayer.pauseVideo(); return; }
+    ytPlayer.playVideo();
+    // 部分手機（iOS）規定第一次要直接點影片才能播放：偵測到沒開始就讓使用者點影片
+    if (!everPlayed) setTimeout(() => { const st = ytPlayer?.getPlayerState?.(); if (st !== 1 && st !== 3) { const sh = $('.yt-shield', v), tp = $('.yt-tap', v); if (sh) sh.style.display = 'none'; if (tp) tp.hidden = false; } }, 900);
   };
   $('#secs', v).onclick = e => {
     const c = e.target.closest('.secchip'); if (!c) return; sel = +c.dataset.k; showSec(sel);
@@ -876,6 +880,9 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && A.playing) keepAwake(true); });
 window.__cajonDebug = () => ({ allSongs, songPlan, drumSections, findGroove, DRUMS, S });
+// 執行錯誤直接顯示在畫面上，方便回報
+addEventListener('error', e => { try { toast('發生錯誤：' + (e.message || '').slice(0, 80)); } catch (_) {} });
+addEventListener('unhandledrejection', e => { try { const m = String(e.reason && e.reason.message || e.reason || ''); if (m && !/abort|fetch|load/i.test(m)) toast('發生錯誤：' + m.slice(0, 80)); } catch (_) {} });
 // 自動偵測手機方向：橫放且高度不足時切換成橫式排版
 function applyOrientation() {
   const w = innerWidth, h = innerHeight, land = w > h && h <= 540;

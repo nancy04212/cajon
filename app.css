@@ -434,3 +434,5 @@ html.land .song-dock{position:fixed;margin:0;right:calc(var(--safe-r) + 16px);bo
 html.land .song-top > div:last-child{padding-bottom:84px}
 html.land .now-hint{display:none}
 html.land .yt-box{max-height:calc(100vh - var(--safe-t) - 170px);margin:0 auto}
+
+.yt-tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:3;pointer-events:none;background:rgba(0,0,0,.72);color:#fff;font-weight:700;font-size:14px;padding:8px 14px;border-radius:99px;white-space:nowrap}
