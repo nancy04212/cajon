@@ -3,10 +3,6 @@ on:
   schedule:
     - cron: '0 2 1 * *'   # 每月 1 日 台灣時間 10:00
   workflow_dispatch:
-    inputs:
-      drums_only:
-        description: '只測試判讀這些影片 id（逗號分隔，不寫入）'
-        required: false
 permissions:
   contents: write
 jobs:
@@ -17,10 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install --no-save --no-audit --no-fund jpeg-js@0.4.4
       - run: node scripts/update-songs.mjs
-        env:
-          DRUMS_ONLY: ${{ github.event.inputs.drums_only }}
       - name: Commit
         run: |
           git config user.name "cajon-bot"

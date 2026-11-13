@@ -2,7 +2,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { parseTitle } from './parse-title.mjs';
 import { makeYT } from './yt-core.mjs';
-import { analyzeDrums } from './drums-core.mjs';
 import { findBpm } from './bpm-core.mjs';
 const cfg = JSON.parse(readFileSync(new URL('./sources.json', import.meta.url)));
 const yt = makeYT();
@@ -72,23 +71,8 @@ for (const pl of cfg.coverPlaylists || []) {
 covers.updated = today;
 writeFileSync('covers.json', JSON.stringify(covers, null, 1) + '\n');
 
-// 3) 判讀 A FU 鼓譜影片的有鼓時段 → drums.json
+// 3) 鼓譜有鼓段落：GitHub 主機讀不到 YouTube 分鏡圖，改由每月排程用 Chrome 執行 scripts/browser-drums.js
 const drums = existsSync('drums.json') ? JSON.parse(readFileSync('drums.json', 'utf8')) : { items: {} };
-drums.tried = drums.tried || [];
-const only = (process.env.DRUMS_ONLY || '').split(',').filter(Boolean);
-const todo = only.length ? only : covers.items.filter(c => /A FU/i.test(c.by) && !drums.items[c.yt] && !drums.tried.includes(c.yt)).map(c => c.yt).slice(0, 60);
-let dOk = 0;
-for (const id of todo) {
-  try {
-    const r = await analyzeDrums(id);
-    if (only.length) console.log('鼓譜判讀', id, JSON.stringify(r.fail ? 'fail' : r.on), r.len);
-    if (r.fail) { if (!only.length) drums.tried.push(id); continue; }
-    const pure = covers.items.find(c => c.yt === id)?.pure;
-    if (!only.length) { drums.items[id] = { on: r.on, len: r.len, buy: r.buy || 'https://bit.ly/3ohHxzI', ...(pure ? { pure: 1 } : {}) }; dOk++; }
-  } catch (e) { console.log('鼓譜判讀失敗', id, e.message); }
-}
-if (!only.length) { drums.updated = today; writeFileSync('drums.json', JSON.stringify(drums) + '\n'); }
-console.log(`鼓譜判讀：處理 ${todo.length} 支，成功 ${dOk} 支`);
 
 // 4) 查 BPM（songbpm.com）→ bpm.json
 const bpms = existsSync('bpm.json') ? JSON.parse(readFileSync('bpm.json', 'utf8')) : { items: {} };
