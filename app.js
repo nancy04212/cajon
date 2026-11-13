@@ -483,7 +483,7 @@ function viewLibrary(v) {
   <div id="gl"></div>`;
   const draw = () => {
     const q = libQ.trim().toLowerCase();
-    let list = allGrooves().filter(g => libCat === 'all' || (libCat === 'fav' ? favs.has(g.id) : libCat === 'mine' ? g.custom : g.cat === libCat));
+    let list = allGrooves().filter(g => !g.hidden).filter(g => libCat === 'all' || (libCat === 'fav' ? favs.has(g.id) : libCat === 'mine' ? g.custom : g.cat === libCat));
     if (q) list = list.filter(g => (g.name + g.en + (CATS.find(c => c.id === g.cat)?.name || '') + tsLabel(g) + (g.note || '')).toLowerCase().includes(q));
     const gl = $('#gl', v);
     if (!list.length) { gl.innerHTML = `<div class="empty">${libCat === 'fav' ? '還沒有收藏，進入節奏頁點 ☆ 加入收藏' : libCat === 'mine' ? '還沒有自編節奏<br><br><button class="btn primary" onclick="location.hash=\'editor\'">開始自編</button>' : '找不到符合的節奏'}</div>`; return; }
@@ -740,10 +740,10 @@ function viewSong(v, id) {
           <div class="stepper"><button id="offM" aria-label="提早">−</button><span class="num" id="offV"></span><button id="offP" aria-label="延後">+</button></div></div>
       </div>
       <div class="section-t">段落</div>
-      <div class="secs" id="secs">${plan.secs.map((s, k) => `<button class="secchip" data-k="${k}"><b>${esc(s.name)}</b><small class="num">${s.bars} 小節</small></button>`).join('')}</div>
+      <div class="secs" id="secs">${plan.secs.map((s, k) => `<button class="secchip${s.g.id === 'rest' ? ' rest' : ''}" data-k="${k}"><b>${esc(s.name)}</b><small class="num">${s.g.id === 'rest' ? '無鼓・' : ''}${s.bars} 小節</small></button>`).join('')}</div>
     </div>
   </div>
-  <div class="card" style="margin-top:14px"><div class="row" style="margin-bottom:10px"><b id="secTitle" style="font-size:17px"></b><a class="fine" id="secGroove" style="margin:0 0 0 auto"></a></div>${legendHtml()}<div id="grid"></div></div>
+  <div class="card" style="margin-top:14px"><div class="row" style="margin-bottom:10px"><b id="secTitle" style="font-size:17px"></b><a class="fine" id="secGroove" style="margin:0 0 0 auto"></a></div><div id="lg">${legendHtml()}</div><div id="grid"></div></div>
   <div class="dock">
     <div class="dock-main">
       <button class="play-lg" data-play="${esc(owner)}" aria-label="播放">${I.play}</button>
@@ -765,8 +765,10 @@ function viewSong(v, id) {
     $$('.secchip', v).forEach(c => c.classList.toggle('on', +c.dataset.k === k));
     const s = plan.secs[k];
     $('#secTitle', v).textContent = `${s.name}・${s.bars} 小節`;
-    const a = $('#secGroove', v); a.textContent = s.g.name + ' →'; a.href = '#g-' + s.g.id;
-    gmap = renderGrid(gridEl, s.g, { autoScroll: false });
+    const a = $('#secGroove', v); a.textContent = s.g.id === 'rest' ? '無鼓' : s.g.name + ' →'; a.href = s.g.id === 'rest' ? 'javascript:void 0' : '#g-' + s.g.id;
+    $('#lg', v).style.display = s.g.id === 'rest' ? 'none' : '';
+    if (s.g.id === 'rest') { gridEl.className = ''; gridEl.innerHTML = `<div class="rest-box"><b>這段沒有鼓聲</b><span class="num">${s.bars} 小節・先聽，準備下一段</span></div>`; gmap = { cols: [], prev: null, prevBar: null }; }
+    else gmap = renderGrid(gridEl, s.g, { autoScroll: false });
     curGrid = { onStep: step => { const m = G && G.map[step]; if (m) highlight(m[0], m[1]); } };
     $('#syncHint', v).textContent = `影片播到「${s.name}」第一拍時按下`;
     const chip = $(`.secchip[data-k="${k}"]`, v); chip?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
@@ -870,7 +872,7 @@ function viewSongEdit(v, id) {
   if (id) { const s = songCustoms.find(x => x.id === id); if (s) songDraft = JSON.parse(JSON.stringify(s)); }
   if (!songDraft) songDraft = { id: null, title: '', artist: '', cat: '我的', bpm: 80, yt: '', cover: null, sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-mid', 16], ['副歌', 'soul', 16]], custom: true };
   const d = songDraft;
-  const opts = cur => CATS.map(c => `<optgroup label="${c.name}">${allGrooves().filter(g => g.cat === c.id && !g.custom).map(g => `<option value="${g.id}" ${g.id === cur ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</optgroup>`).join('')
+  const opts = cur => `<option value="rest" ${cur === 'rest' ? 'selected' : ''}>休息（無鼓）</option>` + CATS.map(c => `<optgroup label="${c.name}">${allGrooves().filter(g => g.cat === c.id && !g.custom).map(g => `<option value="${g.id}" ${g.id === cur ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</optgroup>`).join('')
     + (customs.length ? `<optgroup label="我的節奏">${customs.map(g => `<option value="${g.id}" ${g.id === cur ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</optgroup>` : '');
   v.innerHTML = `<div class="hd"><button class="icon-btn" onclick="history.back()" aria-label="返回">${I.back}</button><div class="grow"><h1 style="font-size:26px">${d.id ? '編輯歌曲' : '新增歌曲'}</h1></div></div>
   <div class="card form">

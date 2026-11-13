@@ -19,11 +19,11 @@ window.SONG_META = {
   '任性': { bpm: 136, artist: '五月天', cover: { yt: 'h7WmqdT8ES0', by: 'A FU Cajon' },
     sections: [['前奏', 'rock', 4], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['過門', 'fill-2beat', 2], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['尾奏', 'rock', 4]] },
   '看著我的眼睛說': { bpm: 77, cover: { yt: 'Ja4jG5Sqqtw', by: 'A FU Cajon' },
-    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'pop-ballad', 4]] },
+    sections: [['前奏', 'rest', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'pop-ballad', 4]] },
   '幸福在歌唱': { bpm: 65, cover: { yt: 'IWEk3vO5UMk', by: 'Mr.One 木箱鼓' },
-    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'worship', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'pop-ballad', 4]] },
+    sections: [['前奏', 'rest', 4], ['主歌', 'rest', 16], ['副歌', 'worship', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'rest', 4]] },
   '海嶼你': { bpm: 75, artist: '馬也_Crabbit', cover: { yt: '1ZW7peoDayU', by: '動態鼓譜' },
-    sections: [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'pop-ballad', 4]] }
+    sections: [['前奏', 'rest', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['過門', 'fill-ballad', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['尾奏', 'rest', 4]] }
 };
 // 沒有速度資料時的預設段落
-window.SONG_DEFAULT_SECTIONS = [['前奏', 'basic-beat', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'eighth-beat', 16], ['過門', 'fill-basic', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'eighth-beat', 16], ['尾奏', 'basic-beat', 4]];
+window.SONG_DEFAULT_SECTIONS = [['前奏', 'rest', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'eighth-beat', 16], ['過門', 'fill-basic', 2], ['主歌', 'pop-ballad', 16], ['副歌', 'eighth-beat', 16], ['尾奏', 'basic-beat', 4]];

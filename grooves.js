@@ -13,6 +13,8 @@ window.CATS = [
 ];
 
 window.GROOVES = [
+  // 歌曲段落用：沒有鼓聲（不在節奏庫顯示）
+  { id: 'rest', name: '休息（無鼓）', en: 'Rest', cat: 'rest', hidden: true, lv: 1, bpm: 80, ts: [4, 4], spb: 4, bars: ['................'] },
   // ---- 入門基礎
   { id: 'basic-beat', name: '基本四拍', en: 'Basic Beat', cat: 'basic', lv: 1, bpm: 70, range: [50, 110], ts: [4, 4], spb: 4,
     bars: ['B...S...B...S...'] },
