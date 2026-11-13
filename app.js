@@ -669,7 +669,7 @@ function buildSeq(plan, from, to, getBpm) {
   const flat = [], spbAt = [], beatStart = [], barStart = [], map = [];
   for (let k = from; k <= to; k++) {
     const s = plan.secs[k];
-    for (let j = 0; j < s.steps; j++) { const local = j % s.pat.length; flat.push(s.pat[local]); spbAt.push(s.g.spb); beatStart.push(j % s.g.spb === 0); barStart.push(j % s.n === 0); map.push([k, local]); }
+    for (let j = 0; j < s.steps; j++) { const local = j % s.pat.length; flat.push(s.pat[local]); spbAt.push(s.g.spb); beatStart.push(j % s.g.spb === 0); barStart.push(j % s.n === 0); map.push([k, local, Math.floor(j / s.n)]); }
   }
   const f = plan.secs[from];
   return { flat, spbAt, beatStart, barStart, map, spb: f.g.spb, beats: f.g.ts[0], getBpm };
@@ -767,14 +767,26 @@ function viewSong(v, id) {
     $('#secTitle', v).textContent = `${s.name}・${s.bars} 小節`;
     const a = $('#secGroove', v); a.textContent = s.g.id === 'rest' ? '無鼓' : s.g.name + ' →'; a.href = s.g.id === 'rest' ? 'javascript:void 0' : '#g-' + s.g.id;
     $('#lg', v).style.display = s.g.id === 'rest' ? 'none' : '';
-    if (s.g.id === 'rest') { gridEl.className = ''; gridEl.innerHTML = `<div class="rest-box"><b>這段沒有鼓聲</b><span class="num">${s.bars} 小節・先聽，準備下一段</span></div>`; gmap = { cols: [], prev: null, prevBar: null }; }
+    if (s.g.id === 'rest') { gridEl.className = ''; const nx = plan.secs.slice(k + 1).find(x => x.g.id !== 'rest');
+      gridEl.innerHTML = `<div class="rest-box"><b>這段沒有鼓聲</b><span class="num" id="restN">${s.bars} 小節・聽歌就好</span><div class="rest-bar"><i id="restP"></i></div><small id="restNx">${nx ? `下一段進鼓：${esc(nx.name)}` : '之後沒有鼓了'}</small></div>`;
+      let after = 0; for (let j = k + 1; j < plan.secs.length && plan.secs[j].g.id === 'rest'; j++) after += plan.secs[j].bars;
+      gmap = { cols: [], prev: null, prevBar: null, rest: s, restBar: -1, after: nx ? after : Infinity }; }
     else gmap = renderGrid(gridEl, s.g, { autoScroll: false });
-    curGrid = { onStep: step => { const m = G && G.map[step]; if (m) highlight(m[0], m[1]); } };
+    curGrid = { onStep: step => { const m = G && G.map[step]; if (m) highlight(m[0], m[1], m[2]); } };
     $('#syncHint', v).textContent = `影片播到「${s.name}」第一拍時按下`;
     const chip = $(`.secchip[data-k="${k}"]`, v); chip?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   }
-  function highlight(k, local) {
+  function highlight(k, local, barIdx) {
     if (k !== curSec) showSec(k);
+    if (gmap.rest) {
+      const s = gmap.rest, b = barIdx ?? 0, beat = Math.floor(local / s.g.spb), key = b * 16 + beat;
+      if (key === gmap.restBar) return; gmap.restBar = key;
+      const left = s.bars - b + gmap.after, n = $('#restN', v), p = $('#restP', v);
+      if (n) n.textContent = left === Infinity ? '聽到最後就好' : left > 1 ? `還有 ${left} 小節進鼓` : `準備進鼓・${s.g.ts[0] - beat}`;
+      if (p) p.style.width = ((b * s.g.ts[0] + beat + 1) / (s.bars * s.g.ts[0]) * 100) + '%';
+      gridEl.firstChild?.classList.toggle('soon', left <= 1);
+      return;
+    }
     if (gmap.prev) gmap.prev.classList.remove('on');
     const el = gmap.cols[local]; if (!el) return; el.classList.add('on'); gmap.prev = el;
     const bar = el.closest('.bar'); if (gmap.prevBar !== bar) { gmap.prevBar?.classList.remove('cur'); bar.classList.add('cur'); gmap.prevBar = bar; }
@@ -840,7 +852,8 @@ function viewSong(v, id) {
     const beats = (ytPlayer.getCurrentTime() - offset) * bpm / 60;
     if (beats >= 0 && beats < plan.totalBeats) {
       const k = plan.secs.findIndex(s => beats < s.startBeat + s.beats), s = plan.secs[k];
-      highlight(k, Math.floor((beats - s.startBeat) * s.g.spb) % s.pat.length);
+      const st = Math.floor((beats - s.startBeat) * s.g.spb);
+      highlight(k, st % s.pat.length, Math.floor(st / s.n));
     }
     ytRaf = requestAnimationFrame(syncLoop);
   }
