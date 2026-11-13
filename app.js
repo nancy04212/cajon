@@ -660,7 +660,7 @@ const chartSongs = () => (CHART.items || []).map(it => {
 });
 let COVERS = store.get('covers', { items: [] });
 let DRUMS = store.get('drums', { items: {} });
-fetch('drums.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = Object.keys(j.items || {}).length !== Object.keys(DRUMS.items || {}).length; DRUMS = j; store.set('drums', j); if (changed && route && route.name === 'songs') render(); }).catch(() => {});
+fetch('drums.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = Object.keys(j.items || {}).length !== Object.keys(DRUMS.items || {}).length; DRUMS = j; store.set('drums', j); if (changed && route && (route.name === 'songs' || (route.name === 'song' && !A.playing))) render(); }).catch(() => {});
 // 依 A FU 鼓譜判讀的「有鼓時段」（秒）換算成段落；速度改變時重算
 function drumSections(song, bpm) {
   const d = song.drums, bar = 240 / bpm, out = [];
