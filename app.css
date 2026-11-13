@@ -293,7 +293,7 @@ h1,h3,.ph-title b{text-wrap:balance}
 @media(max-width:380px){.gc .meta span:nth-child(2),.gc .meta span:nth-child(3){display:none}}
 /* ===== Songs ===== */
 .sl{display:grid;gap:10px;margin-top:8px}
-@media(min-width:900px){.sl{grid-template-columns:1fr 1fr}}
+@media(min-width:900px){.sl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .sc{display:flex;gap:12px;align-items:center;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:10px;transition:transform .15s}
 .sc:active{transform:scale(.98)}
 .sc .th{position:relative;width:112px;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:var(--surface-2);display:grid;place-items:center;color:var(--text-3);flex-shrink:0}
