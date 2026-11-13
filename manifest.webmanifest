@@ -1,0 +1,22 @@
+{
+  "name": "Cajon 木箱鼓節拍訓練",
+  "short_name": "Cajon",
+  "description": "木箱鼓節拍器、互動鼓譜與節奏庫",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B0B0D",
+  "theme_color": "#0B0B0D",
+  "categories": ["music", "education"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "節拍器", "url": "./#metro" },
+    { "name": "節奏庫", "url": "./#library" }
+  ]
+}
