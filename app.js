@@ -758,98 +758,81 @@ function viewSong(v, id) {
   const song = findSong(id);
   if (!song) { v.innerHTML = `<div class="empty">找不到這首歌<br><br><button class="btn" onclick="location.hash='songs'">回歌曲</button></div>`; return; }
   S.sBpm = S.sBpm || {};
-  const planBpm = S.sBpm[id] || song.bpm, owner = 's:' + id, plan = songPlan(song, planBpm), last = plan.secs.length - 1;
-  let bpm = S.sBpm[id] || song.bpm, mode = song.yt ? 'video' : 'app', src = 'orig', sel = 0, loopOn = false, curSec = -1, gmap = null, G = null;
+  const planBpm = S.sBpm[id] || song.bpm, plan = songPlan(song, planBpm);
+  let bpm = planBpm, src = song.cover ? 'cover' : 'orig', sel = 0, loopOn = false, curSec = -1, lastKey = '';
   const afuTL = () => !!song.drums && (src === 'cover' || song.coverOnly);
   const offKey = () => id + (src === 'cover' ? '@c' : '');
   const autoOff = () => { if (!afuTL() || !song.drums.on.length) return 0; const bar = 240 / bpm, s0 = song.drums.on[0][0]; return Math.round((s0 - Math.round(s0 / bar) * bar) * 100) / 100; };
   const curOff = () => songSync[offKey()] ?? autoOff();
   let offset = curOff();
+  const hasSheet = () => (src === 'cover' && song.cover) || (song.coverOnly && song.sheet !== false);
   v.innerHTML = `
   <div class="hd"><button class="icon-btn" onclick="history.length>1?history.back():location.hash='songs'" aria-label="返回">${I.back}</button>
     <div class="grow ph-title"><b>${esc(song.title)}</b><small>${esc(song.artist || '')}</small></div>
-    <button class="icon-btn" id="sEdit" aria-label="${song.custom ? '編輯' : '複製後修改'}">${song.custom ? I.edit : I.copy}</button></div>
+    ${song.custom ? `<button class="icon-btn" id="sEdit" aria-label="編輯">${I.edit}</button>` : ''}</div>
   <div class="song-top">
     <div>
-      ${song.yt ? `<div class="seg" id="srcSeg" style="margin-bottom:10px${song.cover ? '' : ';display:none'}"><button data-s="orig" class="on">原曲</button><button data-s="cover">木箱鼓示範</button></div>
-      <div class="yt-box" id="yt"></div>
-      ${song.cover ? `<div class="fine" id="coverBy" style="display:none;margin-top:6px">示範：${esc(song.cover.by || '')}</div>` : ''}
-      ${song.coverOnly ? `<div class="fine" style="margin-top:6px">${esc(song.coverBy || '')} 木箱鼓示範${song.sheet ? '・影片附鼓譜' : ''}</div>` : ''}` : `<div class="card empty" style="padding:24px">沒有影片・使用 App 伴奏練習</div>`}
+      ${song.yt ? `${song.cover ? `<div class="seg" id="srcSeg" style="margin-bottom:10px"><button data-s="cover" class="on">木箱鼓示範（附譜）</button><button data-s="orig">原曲</button></div>` : ''}
+      <div class="yt-box" id="yt"></div>` : `<div class="card empty" style="padding:24px">這首沒有影片</div>`}
+      <div class="card now" id="now">
+        <div class="now-top"><b id="nowSec"></b><span class="pill" id="nowState"></span><span class="now-bar num" id="nowBar"></span></div>
+        <div class="beats" id="beats"></div>
+        <div class="now-sub" id="nowSub"></div>
+        <div class="rest-bar"><i id="nowP"></i></div>
+      </div>
+      <div class="fine now-hint" id="nowHint"></div>
     </div>
     <div>
-      ${song.yt ? `<div class="seg" id="modeSeg"><button data-m="video" class="on">跟著影片</button><button data-m="app">App 伴奏</button></div>` : ''}
-      <div class="card sync" id="syncCard" style="margin-top:12px${song.yt ? '' : ';display:none'}">
+      <div class="section-t">段落${song.drums && !song.custom ? '<small>依影片鼓譜判斷有鼓、無鼓</small>' : ''}</div>
+      <div class="secs" id="secs">${plan.secs.map((s, k) => `<button class="secchip${s.g.id === 'rest' ? ' rest' : ''}" data-k="${k}"><b>${esc(s.name)}</b><small class="num">${s.g.id === 'rest' ? '無鼓・' : ''}${s.bars} 小節</small></button>`).join('')}</div>
+      ${song.yt ? `<div class="card sync" id="syncCard" style="margin-top:16px">
         <div class="row"><div class="grow" style="flex:1"><b>對拍</b><small id="syncHint"></small></div><button class="help" id="sHelp" aria-label="說明">?</button></div>
         ${song.needsBpm && !S.sBpm[id] ? `<div class="tip" style="margin:10px 0 0">${I.bulb}<div>還沒有速度資料。<br>播放影片，跟著拍子按 TAP。</div></div>` : ''}
         <div class="row" style="margin-top:10px"><button class="btn primary" id="tapSync" style="flex:1">${I.target}對齊這一拍</button><button class="btn" id="tapS">TAP</button>
           <div class="stepper"><button id="offM" aria-label="提早">−</button><span class="num" id="offV"></span><button id="offP" aria-label="延後">+</button></div></div>
-      </div>
-      ${song.drums && song.drums.buy ? `<a class="btn buy" href="${esc(song.drums.buy)}" target="_blank" rel="noopener">${I.song}購買完整鼓譜（A FU）</a>` : ''}
-      <div class="section-t">段落${song.drums && !song.custom ? '<small>依 A FU 鼓譜判斷有鼓、無鼓</small>' : ''}</div>
-      <div class="secs" id="secs">${plan.secs.map((s, k) => `<button class="secchip${s.g.id === 'rest' ? ' rest' : ''}" data-k="${k}"><b>${esc(s.name)}</b><small class="num">${s.g.id === 'rest' ? '無鼓・' : ''}${s.bars} 小節</small></button>`).join('')}</div>
+      </div>` : ''}
     </div>
   </div>
-  <div class="card" style="margin-top:14px"><div class="row" style="margin-bottom:10px"><b id="secTitle" style="font-size:17px"></b><a class="fine" id="secGroove" style="margin:0 0 0 auto"></a></div><div id="lg">${legendHtml()}</div><div id="grid"></div></div>
   <div class="dock">
     <div class="dock-main">
-      <button class="play-lg" data-play="${esc(owner)}" aria-label="播放">${I.play}</button>
+      <button class="play-lg" id="play" aria-label="播放">${I.play}</button>
       <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
-      <input type="range" class="slider" min="30" max="260" id="br" aria-label="速度">
-    </div>
-    <div class="toggles" id="appToggles">
-      <button class="tg" data-t="gDrum">${I.drum}鼓聲</button>
-      <button class="tg" data-t="gClick">${I.click}節拍</button>
-      <button class="tg" data-t="gCount">${I.count}預備拍</button>
       <button class="tg" id="loopT">${I.loop}循環此段</button>
-      <button class="tg help-tg" id="pHelp" aria-label="說明">?</button>
     </div>
   </div>`;
-  const gridEl = $('#grid', v), playBtn = $('[data-play]', v);
+  const playBtn = $('#play', v), beatsEl = $('#beats', v);
   const secStartSec = k => offset + plan.secs[k].startBeat * 60 / bpm;
+  const restAfter = k => { let n = 0; for (let j = k + 1; j < plan.secs.length && plan.secs[j].g.id === 'rest'; j++) n += plan.secs[j].bars; return plan.secs.slice(k + 1).some(x => x.g.id !== 'rest') ? n : Infinity; };
   function showSec(k) {
-    if (k === curSec) return; curSec = k;
+    if (k === curSec) return; curSec = k; lastKey = '';
     $$('.secchip', v).forEach(c => c.classList.toggle('on', +c.dataset.k === k));
-    const s = plan.secs[k];
-    $('#secTitle', v).textContent = `${s.name}・${s.bars} 小節`;
-    const a = $('#secGroove', v); a.textContent = s.g.id === 'rest' ? '無鼓' : s.g.name + ' →'; a.href = s.g.id === 'rest' ? 'javascript:void 0' : '#g-' + s.g.id;
-    $('#lg', v).style.display = s.g.id === 'rest' ? 'none' : '';
-    if (s.g.id === 'rest') { gridEl.className = ''; const nx = plan.secs.slice(k + 1).find(x => x.g.id !== 'rest');
-      gridEl.innerHTML = `<div class="rest-box"><b>這段沒有鼓聲</b><span class="num" id="restN">${s.bars} 小節・聽歌就好</span><div class="rest-bar"><i id="restP"></i></div><small id="restNx">${nx ? `下一段進鼓：${esc(nx.name)}` : '之後沒有鼓了'}</small></div>`;
-      let after = 0; for (let j = k + 1; j < plan.secs.length && plan.secs[j].g.id === 'rest'; j++) after += plan.secs[j].bars;
-      gmap = { cols: [], prev: null, prevBar: null, rest: s, restBar: -1, after: nx ? after : Infinity }; }
-    else gmap = renderGrid(gridEl, s.g, { autoScroll: false });
-    curGrid = { onStep: step => { const m = G && G.map[step]; if (m) highlight(m[0], m[1], m[2]); } };
-    $('#syncHint', v).textContent = `影片播到「${s.name}」第一拍時按下`;
-    const chip = $(`.secchip[data-k="${k}"]`, v); chip?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    const s = plan.secs[k], rest = s.g.id === 'rest';
+    $('#nowSec', v).textContent = s.name;
+    const st = $('#nowState', v); st.textContent = rest ? '無鼓' : '有鼓'; st.classList.toggle('off', rest);
+    $('#now', v).classList.toggle('rest', rest);
+    beatsEl.innerHTML = '<i></i>'.repeat(s.g.ts[0]);
+    $('#syncHint', v) && ($('#syncHint', v).textContent = `影片播到「${s.name}」第一拍時按下`);
+    showPos(k, 0, -1);
+    $(`.secchip[data-k="${k}"]`, v)?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   }
-  function highlight(k, local, barIdx) {
-    if (k !== curSec) showSec(k);
-    if (gmap.rest) {
-      const s = gmap.rest, b = barIdx ?? 0, beat = Math.floor(local / s.g.spb), key = b * 16 + beat;
-      if (key === gmap.restBar) return; gmap.restBar = key;
-      const left = s.bars - b + gmap.after, n = $('#restN', v), p = $('#restP', v);
-      if (n) n.textContent = left === Infinity ? '聽到最後就好' : left > 1 ? `還有 ${left} 小節進鼓` : `準備進鼓・${s.g.ts[0] - beat}`;
-      if (p) p.style.width = ((b * s.g.ts[0] + beat + 1) / (s.bars * s.g.ts[0]) * 100) + '%';
-      gridEl.firstChild?.classList.toggle('soon', left <= 1);
-      return;
-    }
-    if (gmap.prev) gmap.prev.classList.remove('on');
-    const el = gmap.cols[local]; if (!el) return; el.classList.add('on'); gmap.prev = el;
-    const bar = el.closest('.bar'); if (gmap.prevBar !== bar) { gmap.prevBar?.classList.remove('cur'); bar.classList.add('cur'); gmap.prevBar = bar; }
+  function showPos(k, b, beat) {
+    const key = k + ':' + b + ':' + beat; if (key === lastKey) return; lastKey = key;
+    const s = plan.secs[k], n = s.g.ts[0], rest = s.g.id === 'rest';
+    [...beatsEl.children].forEach((d, i) => { d.classList.toggle('on', i === beat); d.classList.toggle('one', i === 0); });
+    $('#nowBar', v).textContent = `${Math.min(b + 1, s.bars)} / ${s.bars} 小節`;
+    $('#nowP', v).style.width = (beat < 0 ? 0 : (b * n + beat + 1) / (s.bars * n) * 100) + '%';
+    const nx = plan.secs[k + 1], sub = $('#nowSub', v);
+    if (rest) { const left = s.bars - b + restAfter(k); sub.textContent = left === Infinity ? '之後沒有鼓了，聽到最後' : left > 1 ? `還有 ${left} 小節進鼓` : `準備進鼓・${n - Math.max(beat, 0)}`; $('#now', v).classList.toggle('soon', left <= 1); }
+    else { sub.textContent = b >= s.bars - 1 && nx ? (nx.g.id === 'rest' ? '下一小節停手' : `下一段：${nx.name}`) : '照著影片裡的鼓譜打'; $('#now', v).classList.remove('soon'); }
   }
-  showSec(0);
+  const hint = () => { const h = $('#nowHint', v); if (!h) return; h.textContent = !song.yt ? '' : hasSheet() ? '鼓譜在影片下方，照著打就好' : song.cover ? '原曲沒有鼓譜，切到「木箱鼓示範」可看譜' : '這首沒有鼓譜影片，跟著拍子自由打'; };
+  showSec(0); hint();
   // BPM
-  const bv = $('#bv', v), br = $('#br', v);
-  const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); S.sBpm[id] = bpm; saveS(); bv.textContent = bpm; br.value = bpm; setRangeFill(br); if (song.drums && !song.custom && bpm !== planBpm) { clearTimeout(window._rp); window._rp = setTimeout(() => { if (!A.playing && route && route.name === 'song') render(); }, 800); } };
+  const bv = $('#bv', v);
+  const setBpm = b => { bpm = clamp(Math.round(b), 30, 260); S.sBpm[id] = bpm; saveS(); bv.textContent = bpm; if (song.drums && !song.custom && bpm !== planBpm) { clearTimeout(window._rp); window._rp = setTimeout(() => { if (route && route.name === 'song' && !(ytPlayer?.getPlayerState?.() === 1)) render(); }, 800); } };
   setBpm(bpm); adjBpm = d => setBpm(bpm + d); bpmGesture($('#bvw', v), () => bpm, setBpm);
-  br.oninput = () => setBpm(+br.value);
   holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
-  // toggles
-  const syncT = () => { $$('.tg[data-t]', v).forEach(b => b.classList.toggle('on', !!S[b.dataset.t])); $('#loopT', v).classList.toggle('on', loopOn); };
-  syncT();
-  $$('.tg[data-t]', v).forEach(b => b.onclick = () => { S[b.dataset.t] = !S[b.dataset.t]; saveS(); syncT(); });
-  $('#loopT', v).onclick = () => { loopOn = !loopOn; syncT(); if (A.playing && A.owner === owner) playApp(); toast(loopOn ? `循環「${plan.secs[sel].name}」` : '播放整首'); };
-  $('#pHelp', v).onclick = () => helpSheet([['跟著影片', '播放原曲，鼓譜跟著歌走。<br>先用「對拍」對齊。'], ['App 伴奏', '不放影片，由 App 打出整首節奏。<br>可放慢速度練習。'], ['循環此段', '只重複目前選的段落。'], ['段落', '點段落可跳到該段。']]);
+  $('#loopT', v).onclick = () => { loopOn = !loopOn; $('#loopT', v).classList.toggle('on', loopOn); toast(loopOn ? `循環「${plan.secs[sel].name}」` : '播放整首'); };
   // offset
   const offV = $('#offV', v);
   const showOff = () => { if (offV) offV.textContent = (offset >= 0 ? '' : '−') + Math.abs(offset).toFixed(2) + 's'; };
@@ -859,71 +842,53 @@ function viewSong(v, id) {
     holdRepeat($('#offM', v), () => { offset -= 0.05; saveOff(); });
     holdRepeat($('#offP', v), () => { offset += 0.05; saveOff(); });
     $('#tapS', v).onclick = () => { const b = tapper.tap(); if (b) setBpm(b); };
-    $('#tapSync', v).onclick = () => {
-      if (!ytPlayer || !ytPlayer.getCurrentTime) { toast('先播放影片'); return; }
-      offset = ytPlayer.getCurrentTime() - plan.secs[curSec].startBeat * 60 / bpm; saveOff(); toast('已對齊');
-    };
-    $('#sHelp', v).onclick = () => helpSheet([['對拍', '播放影片，在選定段落的第一拍按「對齊這一拍」。<br>鼓譜就會跟著歌走。'], ['− / +', '鼓譜太快就按 −，太慢就按 +，每次 0.05 秒。'], ['速度', '原曲速度已設好。<br>越後面越跑掉，可微調 BPM。']]);
+    $('#tapSync', v).onclick = () => { if (!ytPlayer || !ytPlayer.getCurrentTime) { toast('先播放影片'); return; } offset = ytPlayer.getCurrentTime() - plan.secs[curSec].startBeat * 60 / bpm; saveOff(); toast('已對齊'); };
+    $('#sHelp', v).onclick = () => helpSheet([['對拍', '木箱鼓示範已自動對好。<br>原曲請在段落第一拍按「對齊這一拍」。'], ['− / +', '提示太快按 −，太慢按 +，每次 0.05 秒。'], ['TAP', '跟著拍子連按，測出速度。']]);
   }
-  // modes
-  function setMode(m) {
-    mode = m; stop(); if (ytPlayer?.pauseVideo) try { ytPlayer.pauseVideo(); } catch (e) {}
-    $$('#modeSeg button', v).forEach(b => b.classList.toggle('on', b.dataset.m === m));
-    $('#appToggles', v).style.display = m === 'app' ? '' : 'none';
-    const sc = $('#syncCard', v); if (sc) sc.style.display = m === 'video' ? '' : 'none';
-    playBtn.innerHTML = I.play;
-  }
-  $('#modeSeg', v)?.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); });
   // video
   async function mountVideo() {
-    ytStop();
+    ytStop(); playBtn.innerHTML = I.play;
     const box = $('#yt', v); if (!box) return;
     const vid = src === 'cover' ? song.cover.yt : song.yt;
-    const cb = $('#coverBy', v); if (cb) cb.style.display = src === 'cover' ? '' : 'none';
-    offset = curOff(); showOff && showOff();
+    offset = curOff(); showOff(); hint();
     box.innerHTML = `<div class="yt-ph"><img src="${ytThumb(vid)}" alt="" onerror="this.remove()"><span>載入影片中…</span></div>`;
     const ok = await loadYT();
     if (!box.isConnected) return;
     if (!ok) { box.innerHTML = `<a class="yt-ph" href="${ytWatch(vid)}" target="_blank" rel="noopener"><img src="${ytThumb(vid)}" alt="" onerror="this.remove()"><span>${I.yt}此處無法內嵌・點此在 YouTube 開啟</span></a>`; return; }
-    box.innerHTML = '<div id="ytp"></div>';
-    ytPlayer = new YT.Player('ytp', { videoId: vid, host: 'https://www.youtube-nocookie.com', playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+    box.innerHTML = '<div id="ytp"></div><div class="yt-shield" aria-hidden="true"></div>';
+    ytPlayer = new YT.Player('ytp', { videoId: vid, host: 'https://www.youtube-nocookie.com', playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3 },
       events: { onStateChange: e => {
         const playing = e.data === 1;
-        if (mode === 'video') playBtn.innerHTML = playing ? I.stop : I.play;
+        playBtn.innerHTML = playing ? I.stop : I.play;
         cancelAnimationFrame(ytRaf);
-        if (playing && mode === 'video') { practice.start(); syncLoop(); } else practice.stop();
+        if (playing) { practice.start(); syncLoop(); } else practice.stop();
       } } });
   }
   function syncLoop() {
     if (!ytPlayer || !ytPlayer.getCurrentTime || !v.isConnected) return;
-    const beats = (ytPlayer.getCurrentTime() - offset) * bpm / 60;
+    const t = ytPlayer.getCurrentTime();
+    if (loopOn && t >= secStartSec(sel) + plan.secs[sel].beats * 60 / bpm) ytPlayer.seekTo(Math.max(0, secStartSec(sel)), true);
+    const beats = (t - offset) * bpm / 60;
     if (beats >= 0 && beats < plan.totalBeats) {
       const k = plan.secs.findIndex(s => beats < s.startBeat + s.beats), s = plan.secs[k];
-      const st = Math.floor((beats - s.startBeat) * s.g.spb);
-      highlight(k, st % s.pat.length, Math.floor(st / s.n));
+      if (k !== curSec) showSec(k);
+      const lb = beats - s.startBeat, n = s.g.ts[0];
+      showPos(k, Math.floor(lb / n), Math.floor(lb) % n);
     }
     ytRaf = requestAnimationFrame(syncLoop);
   }
   $('#srcSeg', v)?.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.s === src) return; src = b.dataset.s; $$('#srcSeg button', v).forEach(x => x.classList.toggle('on', x === b)); mountVideo(); });
   if (song.yt) mountVideo();
-  // app playback
-  function playApp() {
-    G = loopOn ? buildSeq(plan, sel, sel, () => bpm) : buildSeq(plan, sel, last, () => bpm);
-    start('groove', owner, { groove: G });
-  }
   playBtn.onclick = () => {
-    if (mode === 'video') {
-      if (!ytPlayer || !ytPlayer.getPlayerState) { const a = $('#yt a', v); if (a) a.click(); return; }
-      ytPlayer.getPlayerState() === 1 ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
-    } else (A.playing && A.owner === owner) ? stop() : playApp();
+    if (!song.yt) { toast('這首沒有影片'); return; }
+    if (!ytPlayer || !ytPlayer.getPlayerState) { const a = $('#yt a', v); if (a) a.click(); return; }
+    ytPlayer.getPlayerState() === 1 ? ytPlayer.pauseVideo() : ytPlayer.playVideo();
   };
   $('#secs', v).onclick = e => {
     const c = e.target.closest('.secchip'); if (!c) return; sel = +c.dataset.k; showSec(sel);
-    if (mode === 'video' && ytPlayer?.seekTo) ytPlayer.seekTo(Math.max(0, secStartSec(sel)), true);
-    else if (A.playing && A.owner === owner) playApp();
+    if (ytPlayer?.seekTo) ytPlayer.seekTo(Math.max(0, secStartSec(sel)), true);
   };
-  $('#sEdit', v).onclick = () => { songDraft = song.custom ? null : { ...JSON.parse(JSON.stringify(song)), id: null, title: song.title, custom: true, cat: '我的' }; go(song.custom ? 'songedit-' + id : 'songedit'); };
-  setMode(mode);
+  $('#sEdit', v)?.addEventListener('click', () => go('songedit-' + id));
 }
 
 let songDraft = null;
@@ -1033,7 +998,7 @@ function shell() {
 }
 document.addEventListener('keydown', e => {
   if (e.target.matches('input,textarea,select') || e.metaKey || e.ctrlKey) return;
-  if (e.code === 'Space') { e.preventDefault(); const b = $('[data-play]'); b?.click(); }
+  if (e.code === 'Space') { e.preventDefault(); const b = $('[data-play]') || $('#play'); b?.click(); }
   else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
     e.preventDefault(); const d = (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 5 : 1);
     if (route.name === 'metro') { S.bpm = clamp(S.bpm + d, 20, 300); saveS(); refreshBpm(); }
