@@ -630,13 +630,22 @@ function viewEditor(v, id) {
 /* ---------- Songs ---------- */
 let songCustoms = store.get('songs', []);
 let songSync = store.get('songSync', {});
-let songCat = '全部';
+let songCat = 'chart', songQ = '';
 let CHART = store.get('chart', { updated: '', items: [] });
 const chartSongs = () => (CHART.items || []).map(it => {
+  const src = it.sources || [];
   const m = Object.assign({}, SONG_META[it.title] || {}, SONG_META[it.yt] || {});
-  return { id: it.yt, rank: it.rank, title: m.title || it.title, artist: m.artist || it.artist, cat: '本月排行', yt: it.yt, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: m.cover || null, sections: m.sections || SONG_DEFAULT_SECTIONS };
+  return { id: it.yt, rank: it.rank, sources: src, title: m.title || it.title, artist: m.artist || it.artist, cat: '本月排行', yt: it.yt, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: m.cover || null, sections: m.sections || SONG_DEFAULT_SECTIONS };
 });
-const allSongs = () => [...songCustoms, ...chartSongs()];
+let COVERS = store.get('covers', { items: [] });
+const normT = s => String(s || '').toLowerCase().replace(/[\s·・,，.。!！?？'"“”‘’()（）\[\]【】\-]/g, '');
+const coverMap = () => { const m = new Map(); for (const c of COVERS.items || []) { const k = normT(c.song); if (!m.has(k)) m.set(k, c); } return m; };
+const afuSongs = () => (COVERS.items || []).map(c => {
+  const m = Object.assign({}, SONG_META[c.song] || {}, SONG_META[c.yt] || {});
+  return { id: c.yt, title: m.title || c.song, artist: m.artist || c.artist, cat: 'cover', yt: c.yt, coverOnly: true, coverBy: c.by, sheet: c.sheet, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: null, sections: m.sections || SONG_DEFAULT_SECTIONS };
+});
+const allSongs = () => { const cm = coverMap(); const ch = chartSongs().map(s => { if (!s.cover) { const c = cm.get(normT(s.title)); if (c) s.cover = { yt: c.yt, by: c.by + (c.sheet ? '（附鼓譜）' : '') }; } return s; }); return [...songCustoms, ...ch, ...afuSongs()]; };
+fetch('covers.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = (j.items || []).length !== (COVERS.items || []).length; COVERS = j; store.set('covers', j); if (changed && route && route.name === 'songs') render(); }).catch(() => {});
 fetch('charts.json', { cache: 'no-cache' }).then(r => r.json()).then(j => {
   const changed = JSON.stringify(j.items) !== JSON.stringify(CHART.items);
   CHART = j; store.set('chart', j);
@@ -681,19 +690,26 @@ function loadYT() {
 function ytStop() { cancelAnimationFrame(ytRaf); ytRaf = 0; try { ytPlayer && ytPlayer.destroy(); } catch (e) {} ytPlayer = null; }
 
 function viewSongs(v) {
-  const cats = ['全部', '本月排行', '我的'];
+  const cats = [['chart', '排行榜'], ['cover', 'A FU 木箱鼓'], ['mine', '我的']];
+  if (!['chart', 'cover', 'mine'].includes(songCat)) songCat = 'chart';
   v.innerHTML = `<div class="hd"><div class="grow"><h1>歌曲</h1><div class="sub">${CHART.updated ? `排行榜每月自動更新・${CHART.updated}` : '跟著原曲練節奏'}</div></div><button class="btn sm primary" id="addSong">${I.plus}新增</button></div>
-  <div class="chips" id="scats">${cats.map(c => `<button class="chip ${c === songCat ? 'on' : ''}" data-c="${c}">${c}</button>`).join('')}</div>
+  <div class="search">${I.search}<input class="input" id="sq" placeholder="搜尋歌名或歌手" value="${esc(songQ)}"></div>
+  <div class="chips" id="scats">${cats.map(([k, l]) => `<button class="chip ${k === songCat ? 'on' : ''}" data-c="${k}">${l}</button>`).join('')}</div>
+  <div class="fine" id="shint" style="margin:6px 4px 0"></div>
   <div class="sl" id="sl"></div>`;
   const draw = () => {
-    const list = allSongs().filter(s => songCat === '全部' || (songCat === '我的' ? s.custom : s.cat === songCat));
+    const q = songQ.trim().toLowerCase();
+    let list = allSongs().filter(s => songCat === 'mine' ? s.custom : songCat === 'cover' ? s.coverOnly : (!s.custom && !s.coverOnly));
+    if (q) list = allSongs().filter(s => (s.title + ' ' + s.artist).toLowerCase().includes(q));
+    $('#shint', v).textContent = q ? `找到 ${list.length} 首` : songCat === 'chart' ? (CHART.sources ? '合併 ' + CHART.sources.map(x => x.name).join('、') : '') : songCat === 'cover' ? `A FU Cajon 共 ${list.length} 首・多數附鼓譜` : '';
     $('#sl', v).innerHTML = list.length ? list.map(s => `<button class="sc" data-id="${esc(s.id)}"><div class="th">${I.song}${s.yt ? `<img src="${ytThumb(s.yt)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${s.rank ? `<span class="rank num">${s.rank}</span>` : ''}</div>
-      <div class="si"><b>${esc(s.title)}</b><small>${esc(s.artist || '')}</small><span class="num">${(S.sBpm || {})[s.id] ? S.sBpm[s.id] + ' BPM' : s.needsBpm ? '<em class="need">速度待測</em>' : s.bpm + ' BPM'}${s.cover ? '・有木箱鼓示範' : ''}</span></div></button>`).join('')
+      <div class="si"><b>${esc(s.title)}</b><small>${esc(s.artist || '')}${s.sources && s.sources.length > 1 ? `<i class="srcs">${s.sources.length} 榜</i>` : ''}</small><span class="num">${(S.sBpm || {})[s.id] ? S.sBpm[s.id] + ' BPM' : s.needsBpm ? '<em class="need">速度待測</em>' : s.bpm + ' BPM'}${s.coverOnly ? (s.sheet ? '・附鼓譜' : '') : s.cover ? '・有木箱鼓示範' : ''}</span></div></button>`).join('')
       : `<div class="empty">還沒有自己的歌曲<br><br><button class="btn primary" onclick="location.hash='songedit'">新增歌曲</button></div>`;
   };
   draw();
   $('#addSong', v).onclick = () => { songDraft = null; go('songedit'); };
-  $('#scats', v).onclick = e => { const c = e.target.closest('.chip'); if (!c) return; songCat = c.dataset.c; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); draw(); };
+  $('#sq', v).oninput = e => { songQ = e.target.value; draw(); };
+  $('#scats', v).onclick = e => { const c = e.target.closest('.chip'); if (!c) return; songCat = c.dataset.c; songQ = ''; $('#sq', v).value = ''; $$('#scats .chip').forEach(x => x.classList.toggle('on', x === c)); draw(); };
   $('#sl', v).onclick = e => { const c = e.target.closest('.sc'); if (c) go('song-' + c.dataset.id); };
 }
 
@@ -712,7 +728,8 @@ function viewSong(v, id) {
     <div>
       ${song.yt ? `<div class="seg" id="srcSeg" style="margin-bottom:10px${song.cover ? '' : ';display:none'}"><button data-s="orig" class="on">原曲</button><button data-s="cover">木箱鼓示範</button></div>
       <div class="yt-box" id="yt"></div>
-      ${song.cover ? `<div class="fine" id="coverBy" style="display:none;margin-top:6px">示範：${esc(song.cover.by || '')}</div>` : ''}` : `<div class="card empty" style="padding:24px">沒有影片・使用 App 伴奏練習</div>`}
+      ${song.cover ? `<div class="fine" id="coverBy" style="display:none;margin-top:6px">示範：${esc(song.cover.by || '')}</div>` : ''}
+      ${song.coverOnly ? `<div class="fine" style="margin-top:6px">${esc(song.coverBy || '')} 木箱鼓示範${song.sheet ? '・影片附鼓譜' : ''}</div>` : ''}` : `<div class="card empty" style="padding:24px">沒有影片・使用 App 伴奏練習</div>`}
     </div>
     <div>
       ${song.yt ? `<div class="seg" id="modeSeg"><button data-m="video" class="on">跟著影片</button><button data-m="app">App 伴奏</button></div>` : ''}

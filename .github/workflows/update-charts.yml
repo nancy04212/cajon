@@ -1,4 +1,4 @@
-name: 每月更新排行榜歌曲
+name: 每月更新流行歌曲與木箱鼓翻奏
 on:
   schedule:
     - cron: '0 2 1 * *'   # 每月 1 日 台灣時間 10:00
@@ -13,13 +13,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node scripts/update-charts.mjs
+      - run: node scripts/update-songs.mjs
       - name: Commit
         run: |
           git config user.name "cajon-bot"
           git config user.email "actions@users.noreply.github.com"
-          if [ -n "$(git status --porcelain charts.json)" ]; then
-            git add charts.json
+          if [ -n "$(git status --porcelain charts.json covers.json)" ]; then
+            git add charts.json covers.json
             git commit -m "每月更新排行榜歌曲 $(date +%Y-%m)"
             git push
           fi
