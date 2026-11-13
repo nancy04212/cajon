@@ -335,3 +335,8 @@ select.input{appearance:auto}
 .bpm-touch .u,.bpm-unit{white-space:nowrap}
 .bpm-input{height:76px;font-size:44px;font-weight:800;text-align:center}
 .quick{flex-wrap:wrap;margin:12px 0 0;padding:0}
+
+.sc .th .rank{position:absolute;left:6px;top:6px;min-width:22px;height:22px;padding:0 6px;border-radius:7px;background:rgba(0,0,0,.72);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center}
+.need{font-style:normal;color:var(--accent);font-weight:700}
+.sync .row{flex-wrap:wrap}
+.sync .stepper{margin-left:auto}

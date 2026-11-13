@@ -631,7 +631,17 @@ function viewEditor(v, id) {
 let songCustoms = store.get('songs', []);
 let songSync = store.get('songSync', {});
 let songCat = '全部';
-const allSongs = () => [...songCustoms, ...SONGS];
+let CHART = store.get('chart', { updated: '', items: [] });
+const chartSongs = () => (CHART.items || []).map(it => {
+  const m = Object.assign({}, SONG_META[it.title] || {}, SONG_META[it.yt] || {});
+  return { id: it.yt, rank: it.rank, title: m.title || it.title, artist: m.artist || it.artist, cat: '本月排行', yt: it.yt, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: m.cover || null, sections: m.sections || SONG_DEFAULT_SECTIONS };
+});
+const allSongs = () => [...songCustoms, ...chartSongs()];
+fetch('charts.json', { cache: 'no-cache' }).then(r => r.json()).then(j => {
+  const changed = JSON.stringify(j.items) !== JSON.stringify(CHART.items);
+  CHART = j; store.set('chart', j);
+  if (changed && route && (route.name === 'songs' || (route.name === 'song' && !A.playing))) render();
+}).catch(() => {});
 const findSong = id => allSongs().find(s => s.id === id);
 const ytThumb = id => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 const ytWatch = id => `https://www.youtube.com/watch?v=${id}`;
@@ -671,14 +681,14 @@ function loadYT() {
 function ytStop() { cancelAnimationFrame(ytRaf); ytRaf = 0; try { ytPlayer && ytPlayer.destroy(); } catch (e) {} ytPlayer = null; }
 
 function viewSongs(v) {
-  const cats = ['全部', ...SONG_CATS, '我的'];
-  v.innerHTML = `<div class="hd"><div class="grow"><h1>歌曲</h1><div class="sub">跟著原曲練節奏</div></div><button class="btn sm primary" id="addSong">${I.plus}新增</button></div>
+  const cats = ['全部', '本月排行', '我的'];
+  v.innerHTML = `<div class="hd"><div class="grow"><h1>歌曲</h1><div class="sub">${CHART.updated ? `排行榜每月自動更新・${CHART.updated}` : '跟著原曲練節奏'}</div></div><button class="btn sm primary" id="addSong">${I.plus}新增</button></div>
   <div class="chips" id="scats">${cats.map(c => `<button class="chip ${c === songCat ? 'on' : ''}" data-c="${c}">${c}</button>`).join('')}</div>
   <div class="sl" id="sl"></div>`;
   const draw = () => {
     const list = allSongs().filter(s => songCat === '全部' || (songCat === '我的' ? s.custom : s.cat === songCat));
-    $('#sl', v).innerHTML = list.length ? list.map(s => `<button class="sc" data-id="${esc(s.id)}"><div class="th">${I.song}${s.yt ? `<img src="${ytThumb(s.yt)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>
-      <div class="si"><b>${esc(s.title)}</b><small>${esc(s.artist || '')}</small><span class="num">${s.bpm} BPM・${s.sections.length} 段${s.cover ? '・有木箱鼓示範' : ''}</span></div></button>`).join('')
+    $('#sl', v).innerHTML = list.length ? list.map(s => `<button class="sc" data-id="${esc(s.id)}"><div class="th">${I.song}${s.yt ? `<img src="${ytThumb(s.yt)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${s.rank ? `<span class="rank num">${s.rank}</span>` : ''}</div>
+      <div class="si"><b>${esc(s.title)}</b><small>${esc(s.artist || '')}</small><span class="num">${(S.sBpm || {})[s.id] ? S.sBpm[s.id] + ' BPM' : s.needsBpm ? '<em class="need">速度待測</em>' : s.bpm + ' BPM'}${s.cover ? '・有木箱鼓示範' : ''}</span></div></button>`).join('')
       : `<div class="empty">還沒有自己的歌曲<br><br><button class="btn primary" onclick="location.hash='songedit'">新增歌曲</button></div>`;
   };
   draw();
@@ -708,7 +718,8 @@ function viewSong(v, id) {
       ${song.yt ? `<div class="seg" id="modeSeg"><button data-m="video" class="on">跟著影片</button><button data-m="app">App 伴奏</button></div>` : ''}
       <div class="card sync" id="syncCard" style="margin-top:12px${song.yt ? '' : ';display:none'}">
         <div class="row"><div class="grow" style="flex:1"><b>對拍</b><small id="syncHint"></small></div><button class="help" id="sHelp" aria-label="說明">?</button></div>
-        <div class="row" style="margin-top:10px"><button class="btn primary" id="tapSync" style="flex:1">${I.target}對齊這一拍</button>
+        ${song.needsBpm && !S.sBpm[id] ? `<div class="tip" style="margin:10px 0 0">${I.bulb}<div>還沒有速度資料。<br>播放影片，跟著拍子按 TAP。</div></div>` : ''}
+        <div class="row" style="margin-top:10px"><button class="btn primary" id="tapSync" style="flex:1">${I.target}對齊這一拍</button><button class="btn" id="tapS">TAP</button>
           <div class="stepper"><button id="offM" aria-label="提早">−</button><span class="num" id="offV"></span><button id="offP" aria-label="延後">+</button></div></div>
       </div>
       <div class="section-t">段落</div>
@@ -770,6 +781,7 @@ function viewSong(v, id) {
   if (song.yt) {
     holdRepeat($('#offM', v), () => { offset -= 0.05; saveOff(); });
     holdRepeat($('#offP', v), () => { offset += 0.05; saveOff(); });
+    $('#tapS', v).onclick = () => { const b = tapper.tap(); if (b) setBpm(b); };
     $('#tapSync', v).onclick = () => {
       if (!ytPlayer || !ytPlayer.getCurrentTime) { toast('先播放影片'); return; }
       offset = ytPlayer.getCurrentTime() - plan.secs[curSec].startBeat * 60 / bpm; saveOff(); toast('已對齊');

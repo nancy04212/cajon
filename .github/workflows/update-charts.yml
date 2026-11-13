@@ -1,0 +1,25 @@
+name: 每月更新排行榜歌曲
+on:
+  schedule:
+    - cron: '0 2 1 * *'   # 每月 1 日 台灣時間 10:00
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/update-charts.mjs
+      - name: Commit
+        run: |
+          git config user.name "cajon-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if [ -n "$(git status --porcelain charts.json)" ]; then
+            git add charts.json
+            git commit -m "每月更新排行榜歌曲 $(date +%Y-%m)"
+            git push
+          fi
