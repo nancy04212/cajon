@@ -9,6 +9,9 @@ window.SONG_META = {
   '跳楼机': { title: '跳樓機', artist: 'LBI 利比', bpm: 128, cover: { yt: 'SkSqJM5PMcc', by: 'Mr.One 木箱鼓' },
     sections: [['前奏', 'eighth-beat', 4], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['過門', 'fill-1beat', 2], ['主歌', 'eighth-beat', 16], ['副歌', 'rock', 16], ['尾奏', 'eighth-beat', 4]] },
   '爱错': { title: '愛錯', artist: 'En' },
+  '張紫寧 李鑫一': { title: '一念', artist: '張紫寧、李鑫一' },
+  'I Do': { artist: '周杰倫' },
+  '流星雨': { artist: 'F4 × 五月天' },
   '妥協': { artist: 'En' },
   // 已補速度
   '像晴天像雨天': { bpm: 128, cover: { yt: '0t6IzoOkfTA', by: 'Mr.One 木箱鼓' },

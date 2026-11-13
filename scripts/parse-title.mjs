@@ -2,14 +2,14 @@
 export function parseTitle(raw, channel = '') {
   const CJK = /[㐀-鿿豈-﫿]/;
   const leadName = s => { s = s.trim(); const m = s.match(/^[㐀-鿿豈-﫿][㐀-鿿豈-﫿·・]*/); return m ? m[0] : s.replace(/\s*-\s*Topic$/i, '').slice(0, 24).trim(); };
-  const cjkTokens = s => { const tk = s.trim().split('/')[0].split(/\s+/); const i = tk.findIndex(x => CJK.test(x)); if (i < 0) return ''; const out = []; for (let j = i; j < tk.length && CJK.test(tk[j]); j++) out.push(tk[j]); return out.join(' ').replace(/[【〈\[《(（].*$/, '').trim(); };
+  const cjkTokens = s => { const tk = s.trim().split('/')[0].split(/\s+/).filter(x => !/^(官方|feat\.?|ft\.?)/i.test(x)).map(x => x.replace(/^([\u3400-\u9fff\uf900-\ufaff][\u3400-\u9fff\uf900-\ufaff，、]*)[A-Za-z].*$/, '$1')); const i = tk.findIndex(x => CJK.test(x)); if (i < 0) return ''; const out = []; for (let j = i; j < tk.length && CJK.test(tk[j]); j++) out.push(tk[j]); return out.join(' ').replace(/[【〈\[《［(（].*$/, '').replace(/\s*官方.*$/, '').trim(); };
   const stripJunk = s => s.replace(/[（(\[【][^）)\]】]*[）)\]】]/g, ' ').replace(/[|｜].*$/, '').replace(/\b(official|music video|lyric video|lyrics?|visualizer|mv)\b.*$/i, '').replace(/\s+/g, ' ').trim();
   let t = String(raw).replace(/\s+/g, ' ').trim().replace(/[『「][^』」]*[』」]/g, ' ').replace(/[♫♪]/g, ' ');
   const noParen = t.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s+/g, ' ').trim();
   const base = CJK.test(noParen) ? noParen : t;
   let song = '', artist = '';
-  const bm = base.match(/^(.*?)\s*[【〈\[《]\s*([^】〉\]》]+?)\s*[】〉\]》]/);
-  const dm = base.match(/^(.+?)\s+[-–—]\s+(.+)$/);
+  const bm = base.match(/^(.*?)\s*[【〈\[《［]\s*([^】〉\]》］]+?)\s*[】〉\]》］]/);
+  const dm = base.match(/^(.+?)(?:\s+[-–—]\s*|\s*[-–—]\s+)(.+)$/);
   const bIdx = bm ? bm[1].length : Infinity, dIdx = dm ? dm[1].length : Infinity;
   if (bm && bm[2].trim() && bIdx <= dIdx && !/^(official|高音質|動態歌詞)/i.test(bm[2].trim())) { artist = bm[1]; song = bm[2]; }
   else if (dm) { artist = dm[1]; song = dm[2]; }
