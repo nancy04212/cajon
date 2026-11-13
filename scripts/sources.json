@@ -1,12 +1,44 @@
 {
   "max": 80,
   "sources": [
-    { "name": "KKBOX 週榜", "type": "search", "query": "KKBOX 華語單曲+新歌排行週榜", "match": "KKBOX 華語單曲" },
-    { "name": "錢櫃點播", "type": "search", "query": "錢櫃 國語點播排行榜", "match": "錢櫃 - 國語點播" },
-    { "name": "KKBOX 風雲榜", "type": "playlist", "id": "PL6F4c88c6vD7KnyH9ajnZXyDiFZyanRce" },
-    { "name": "中文排行榜", "type": "playlist", "id": "PL3oW2tjiIxvTUfDOkivqSDxrxfQccwxsN" }
+    {
+      "name": "KKBOX 週榜",
+      "type": "search",
+      "query": "KKBOX 華語單曲+新歌排行週榜",
+      "match": "KKBOX 華語單曲"
+    },
+    {
+      "name": "錢櫃點播",
+      "type": "search",
+      "query": "錢櫃 國語點播排行榜",
+      "match": "錢櫃 - 國語點播"
+    },
+    {
+      "name": "KKBOX 風雲榜",
+      "type": "playlist",
+      "id": "PL6F4c88c6vD7KnyH9ajnZXyDiFZyanRce"
+    },
+    {
+      "name": "中文排行榜",
+      "type": "playlist",
+      "id": "PL3oW2tjiIxvTUfDOkivqSDxrxfQccwxsN"
+    }
   ],
   "coverChannels": [
-    { "name": "A FU Cajon", "handle": "@afucajon" }
+    {
+      "name": "A FU Cajon",
+      "handle": "@afucajon"
+    }
+  ],
+  "coverPlaylists": [
+    {
+      "name": "A FU Cajon",
+      "id": "PLheE2HYDgVashrZA5ac0qd2ukqG1AhUNb"
+    },
+    {
+      "name": "A FU Cajon",
+      "id": "PLheE2HYDgVasBi7I2iukIcJQPBpBEQAcc",
+      "pure": true
+    }
   ]
 }

@@ -653,10 +653,13 @@ let songCustoms = store.get('songs', []);
 let songSync = store.get('songSync', {});
 let songCat = 'chart', songQ = '';
 let CHART = store.get('chart', { updated: '', items: [] });
+let BPMS = store.get('bpms', { items: {} });
+const bpmOf = (m, yt) => m.bpm || (BPMS.items || {})[yt] || 0;
+fetch('bpm.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = Object.keys(j.items || {}).length !== Object.keys(BPMS.items || {}).length; BPMS = j; store.set('bpms', j); if (changed && route && (route.name === 'songs' || (route.name === 'song' && !A.playing))) render(); }).catch(() => {});
 const chartSongs = () => (CHART.items || []).map(it => {
   const src = it.sources || [];
   const m = Object.assign({}, SONG_META[it.title] || {}, SONG_META[it.yt] || {});
-  return { id: it.yt, rank: it.rank, sources: src, title: m.title || it.title, artist: m.artist || it.artist, cat: '本月排行', yt: it.yt, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: m.cover || null, sections: m.sections || SONG_DEFAULT_SECTIONS, metaSecs: !!m.sections };
+  return { id: it.yt, rank: it.rank, sources: src, title: m.title || it.title, artist: m.artist || it.artist, cat: '本月排行', yt: it.yt, bpm: bpmOf(m, it.yt) || 80, needsBpm: !bpmOf(m, it.yt), cover: m.cover || null, sections: m.sections || SONG_DEFAULT_SECTIONS, metaSecs: !!m.sections };
 });
 let COVERS = store.get('covers', { items: [] });
 let DRUMS = store.get('drums', { items: {} });
@@ -679,7 +682,7 @@ const normT = s => String(s || '').toLowerCase().replace(/[\s·・,，.。!！?�
 const coverMap = () => { const m = new Map(); for (const c of COVERS.items || []) { const k = normT(c.song); if (!m.has(k)) m.set(k, c); } return m; };
 const afuSongs = () => (COVERS.items || []).map(c => {
   const m = Object.assign({}, SONG_META[c.song] || {}, SONG_META[c.yt] || {});
-  return { id: c.yt, title: m.title || c.song, artist: m.artist || c.artist, cat: 'cover', yt: c.yt, coverOnly: true, coverBy: c.by, sheet: c.sheet, bpm: m.bpm || 80, needsBpm: !m.bpm, cover: null, sections: m.sections || SONG_DEFAULT_SECTIONS, metaSecs: !!m.sections, drums: DRUMS.items[c.yt] || null };
+  return { id: c.yt, title: m.title || c.song, artist: m.artist || c.artist, cat: 'cover', yt: c.yt, coverOnly: true, coverBy: c.by, sheet: c.sheet, bpm: bpmOf(m, c.yt) || 80, needsBpm: !bpmOf(m, c.yt), cover: null, sections: m.sections || SONG_DEFAULT_SECTIONS, metaSecs: !!m.sections, drums: DRUMS.items[c.yt] || null };
 });
 const allSongs = () => { const cm = coverMap(); const ch = chartSongs().map(s => { if (!s.cover) { const c = cm.get(normT(s.title)); if (c) s.cover = { yt: c.yt, by: c.by + (c.sheet ? '（附鼓譜）' : '') }; } const af = cm.get(normT(s.title)); if (af && DRUMS.items[af.yt] && !(s.cover && DRUMS.items[s.cover.yt])) s.cover = { yt: af.yt, by: af.by + '（附鼓譜）' }; s.drums = (s.cover && DRUMS.items[s.cover.yt]) || null; return s; }); return [...songCustoms, ...ch, ...afuSongs()]; };
 fetch('covers.json', { cache: 'no-cache' }).then(r => r.json()).then(j => { const changed = (j.items || []).length !== (COVERS.items || []).length; COVERS = j; store.set('covers', j); if (changed && route && route.name === 'songs') render(); }).catch(() => {});
