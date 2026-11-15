@@ -8,6 +8,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 
 /* ---------- Icons ---------- */
 const I = {
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.4 9.2a2.7 2.7 0 0 1 5.2.9c0 1.8-2.6 2.3-2.6 3.9"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg>',
   metro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3h5l4.5 18H5L9.5 3z"/><path d="M12 15l5-9"/><path d="M7.5 15h9"/></svg>',
   lib: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v16"/><circle cx="13" cy="14.5" r="1.4" fill="currentColor"/><circle cx="17" cy="14.5" r="1" fill="currentColor"/></svg>',
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M17.5 14v7M14 17.5h7"/></svg>',
@@ -346,6 +347,7 @@ function barSvg(bar, g, bi, hs, counts, grpSize) {
   let bg = '', mus = '', txt = '';
   for (let s = 0; s < n; s++) bg += `<rect class="col" data-i="${bi * n + s}" x="${X(s) - stepW / 2 + 1}" y="-10" width="${stepW - 2}" height="${H + 10}" rx="6"/>`;
   mus += staffLines(4, W - 4) + `<line class="blk" x1="4" x2="4" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/><line class="blk" x1="${W - 4}" x2="${W - 4}" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/>`;
+  for (let s0 = grpSize; s0 < n; s0 += grpSize) { const bx = PADL + s0 * stepW; mus += `<line class="bsep" x1="${bx}" x2="${bx}" y1="-12" y2="${H - 2}"/>`; }
   for (let s0 = 0; s0 < n; s0 += grpSize) {
     const cells = bar.slice(s0, s0 + grpSize).split(''), nt = beatNotation(cells, grpSize === g.spb ? g.spb : 2);
     cells.forEach((c, k) => {
@@ -591,6 +593,7 @@ function viewGroove(v, id) {
   v.innerHTML = `
   <div class="hd"><button class="icon-btn" onclick="history.length>1?history.back():location.hash='library'" aria-label="返回">${I.back}</button>
     <div class="grow ph-title"><b>${esc(g.name)}</b><small>${esc(g.en || '自編節奏')}</small></div>
+    <button class="icon-btn" id="pHelp" aria-label="按鈕說明" title="按鈕說明">${I.info}</button>
     <button class="icon-btn" id="fav" aria-label="收藏" style="color:${favs.has(id) ? 'var(--amber)' : 'inherit'}">${favs.has(id) ? I.starF : I.star}</button></div>
   <div class="tags"><span class="tag">${cat ? cat.name : '我的節奏'}</span><span class="tag num">${tsLabel(g)}</span><span class="tag">${LV[g.lv || 1]} ${levelHtml(g.lv || 1)}</span><span class="tag num">建議 ${g.range ? g.range.join('–') : g.bpm} BPM</span><span class="tag">${g.bars.length} 小節循環</span></div>
   <div class="card">${legendHtml()}<div id="grid"></div></div>
@@ -607,7 +610,6 @@ function viewGroove(v, id) {
       <button class="tg" data-t="gCount">${I.count}預備拍</button>
       <button class="tg" data-t="gTrainer">${I.rocket}速度訓練</button>
       <button class="tg" id="tapG">TAP</button>
-      <button class="tg help-tg" id="pHelp" aria-label="說明">?</button>
     </div>
     <div class="trainer-status" id="trs"></div>
   </div>`;

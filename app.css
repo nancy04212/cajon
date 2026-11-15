@@ -458,3 +458,17 @@ html.land .yt-box{max-height:calc(100vh - var(--safe-t) - 170px);margin:0 auto}
 .ns .cnt.off{font-weight:600;fill:var(--text-3)}
 .ns .hand{font-size:11px;font-weight:700;fill:var(--text-3)}
 .ns .nn{transform-box:fill-box;transform-origin:center;transition:transform .08s}
+
+.ns .bsep{stroke:var(--line-2);stroke-width:1.6;stroke-linecap:round}
+/* 播放列：置中、間距加寬；功能鍵均分排列 */
+.dock-main{justify-content:center;gap:clamp(14px,5vw,28px)}
+.dock .bpm-mini{gap:clamp(8px,3vw,16px)}
+.toggles{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px;overflow:visible}
+.toggles .tg{flex:0 1 calc((100% - 16px) / 3)}
+.toggles .tg{justify-content:center;height:40px;padding:0 10px;font-size:14px}
+.song-dock .dock-main{justify-content:center}
+html.land .toggles{display:flex;margin-top:0;gap:6px}
+html.land .toggles .tg{height:36px;font-size:13px}
+html.land .dock-main{gap:10px}
+html.land .toggles .tg{flex:0 0 auto}
+html.land .ns{width:100%;max-width:none;height:calc(100vh - var(--safe-t) - var(--safe-b) - 215px);min-height:120px}
