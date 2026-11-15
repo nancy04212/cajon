@@ -450,8 +450,8 @@ html.land .yt-box{max-height:calc(100vh - var(--safe-t) - 170px);margin:0 auto}
 .ns .beam,.ns .rs,.ns .dot{fill:var(--text)}
 .ns .rsl,.ns .flag{fill:none;stroke:var(--text);stroke-width:1.5;stroke-linecap:round}
 .ns .rs .rsl{stroke:var(--text)}
-:is(.ns,.ki) .hd.B{fill:var(--c-B)} :is(.ns,.ki) .hd.T{fill:var(--c-T)} :is(.ns,.ki) .hd.g{fill:var(--c-g)}
-:is(.ns,.ki) .hx{stroke:var(--c-S);stroke-width:2.6;stroke-linecap:round;fill:none}
+:is(.ns,.ki) .hd.B{fill:var(--c-B)} :is(.ns,.ki) .hd.S{fill:var(--c-S)}
+:is(.ns,.ki) .hx{stroke:var(--c-g);stroke-width:2.2;stroke-linecap:round;fill:none}
 :is(.ns,.ki) .gp{font-size:10px;font-weight:700;fill:var(--c-g);letter-spacing:1px}
 .ns .tup{font-size:10px;font-weight:800;fill:var(--text-2)}
 .ns .cnt{font-size:13px;font-weight:800;fill:var(--text);font-variant-numeric:tabular-nums}

@@ -299,49 +299,52 @@ function miniHtml(g) {
   const b = g.bars[0];
   return `<div class="mini">${b.split('').map((c, i) => (i && i % g.spb === 0 ? '<i class="gap"></i>' : '') + `<i class="${c === '.' ? '' : c}"></i>`).join('')}</div>`;
 }
-// ---- 音符式鼓譜（SVG，一小節一張）----
-const NY = { S: 24, s: 24, T: 36, B: 48 };               // 響音：上間、中音：中線、低音：下間
-const BEAT_W = 80, PADL = 14, ST_TOP = 20, ST_GAP = 8;   // 五線譜 y=20..52
+// ---- 音符式鼓譜（SVG，一小節一張；依常見木箱鼓譜：低音在下、響音在上方音符、鬼音用 ✕ 寫在譜線上方）----
+const NY = { s: 12, S: 28, T: 28, B: 48 };
+const UP = c => c !== 'B';
+const BEAT_W = 80, PADL = 14, ST_TOP = 20, ST_GAP = 8, UP_TOP = -6, DN_BOT = 68;
 const staffLines = (x1, x2) => [0, 1, 2, 3, 4].map(k => `<line x1="${x1}" x2="${x2}" y1="${ST_TOP + k * ST_GAP}" y2="${ST_TOP + k * ST_GAP}" class="sl"/>`).join('');
 function headSvg(c, x) {
   const y = NY[c];
-  if (c === 'S') return `<path class="hx" d="M${x - 4.6} ${y - 4.6}L${x + 4.6} ${y + 4.6}M${x + 4.6} ${y - 4.6}L${x - 4.6} ${y + 4.6}"/>`;
-  if (c === 's') return `<text class="gp" x="${x}" y="${y + 4}" text-anchor="middle">(  )</text><ellipse class="hd g" cx="${x}" cy="${y}" rx="4.2" ry="3.2" transform="rotate(-20 ${x} ${y})"/>`;
-  return `<ellipse class="hd ${c}" cx="${x}" cy="${y}" rx="5.8" ry="4.3" transform="rotate(-20 ${x} ${y})"/>`;
+  if (c === 's') return `<path class="hx" d="M${x - 4.2} ${y - 4.2}L${x + 4.2} ${y + 4.2}M${x + 4.2} ${y - 4.2}L${x - 4.2} ${y + 4.2}"/>`;
+  return `<ellipse class="hd ${c === 'B' ? 'B' : 'S'}" cx="${x}" cy="${y}" rx="5.8" ry="4.3" transform="rotate(-20 ${x} ${y})"/>`;
 }
+const stemX = (c, x) => c === 's' ? x + 4.2 : UP(c) ? x + 5.2 : x - 5.2;
 const REST_PATH = {
   4: (x) => `<path class="rs" transform="translate(${x - 5} 22)" d="M3.2 1l4.6 5.3-3 3.7 3.4 4.4c-2.6-.9-4.4.4-2.6 4.6-3.4-2.6-3-6 .2-5.5L2.4 9.6l3-3.8z"/>`,
   2: (x) => `<g class="rs" transform="translate(${x - 4} 26)"><circle cx="2.4" cy="3" r="2.2"/><path class="rsl" d="M3.4 4.6c1.8.2 3.2-.8 4.3-2.6L4 17"/></g>`,
   1: (x) => `<g class="rs" transform="translate(${x - 4} 24)"><circle cx="3" cy="3" r="2"/><circle cx="2" cy="9" r="2"/><path class="rsl" d="M4 4.4c1.7.2 3-.7 4-2.4L3.6 21M3.2 10.4c1.6.2 2.8-.6 3.8-2.2"/></g>`
 };
-const keyIcon = c => `<svg class="ki" viewBox="0 14 26 46" aria-hidden="true">${staffLines(0, 26)}${headSvg(c, 13)}</svg>`;
+const keyIcon = c => `<svg class="ki" viewBox="0 2 26 54" aria-hidden="true">${staffLines(0, 26)}${headSvg(c, 13)}</svg>`;
 const legendHtml = () => `<div class="legend">
-  <span>${keyIcon('B')}低音</span><span>${keyIcon('T')}中音</span><span>${keyIcon('S')}響音</span><span>${keyIcon('s')}鬼音</span>
+  <span>${keyIcon('B')}低音</span><span>${keyIcon('S')}響音</span><span>${keyIcon('s')}鬼音</span>
   <span><b style="color:var(--text)">R / L</b>&nbsp;右手 / 左手</span></div>`;
-// 一拍內的時值：回傳每格的 {d, beams, b1, b2, stub, flags, dot, rest}
+// 一拍內：時值算到下一個打點；上聲部（響音、鬼音）與下聲部（低音）各自連符槓
 function beatNotation(cells, spb) {
   const hits = []; cells.forEach((c, i) => { if (c !== '.') hits.push(i); });
   const out = cells.map(() => ({}));
   const beamsOf = d => spb >= 4 ? (d === 1 ? 2 : d <= 3 ? 1 : 0) : (spb >= 2 ? (d === 1 ? 1 : 0) : 0);
   if (!hits.length) { out[0].rest = 4; return out; }
-  const lead = hits[0];
-  if (lead) out[0].rest = spb >= 4 && lead === 1 ? 1 : 2;
+  if (hits[0]) out[0].rest = spb >= 4 && hits[0] === 1 ? 1 : 2;
   hits.forEach((i, k) => { const d = (k + 1 < hits.length ? hits[k + 1] : cells.length) - i; Object.assign(out[i], { d, beams: beamsOf(d), dot: spb >= 4 && d === 3 }); });
-  if (hits.length > 1) {
-    hits.forEach((i, k) => {
-      const nx = hits[k + 1], pv = hits[k - 1];
-      if (nx !== undefined) { out[i].b1 = nx; if (out[i].beams === 2 && out[nx].beams === 2) out[i].b2 = nx; }
-      if (out[i].beams === 2 && out[i].b2 === undefined && !(pv !== undefined && out[pv].b2 !== undefined)) out[i].stub = nx !== undefined ? 1 : -1;
-    });
-    if (spb === 3 || spb === 6) out[hits[0]].tup = spb === 3 ? 3 : 6;
-  } else if (out[hits[0]].beams) out[hits[0]].flags = out[hits[0]].beams;
+  for (const up of [true, false]) {
+    const vh = hits.filter(i => UP(cells[i]) === up);
+    if (vh.length > 1) {
+      vh.forEach((i, k) => {
+        const nx = vh[k + 1], pv = vh[k - 1];
+        if (nx !== undefined) { out[i].b1 = nx; if (out[i].beams === 2 && out[nx].beams === 2) out[i].b2 = nx; }
+        if (out[i].beams === 2 && out[i].b2 === undefined && !(pv !== undefined && out[pv].b2 !== undefined)) out[i].stub = nx !== undefined ? 1 : -1;
+      });
+      if (spb === 3 && up) out[vh[0]].tup = 3;
+    } else if (vh.length === 1 && out[vh[0]].beams) out[vh[0]].flags = out[vh[0]].beams;
+  }
   return out;
 }
 function barSvg(bar, g, bi, hs, counts, grpSize) {
-  const n = bar.length, beats = n / g.spb, stepW = BEAT_W / g.spb, W = PADL + beats * BEAT_W + 8, H = 98;
+  const n = bar.length, beats = n / g.spb, stepW = BEAT_W / g.spb, W = PADL + beats * BEAT_W + 8, H = 104;
   const X = s => PADL + s * stepW + stepW / 2;
   let bg = '', mus = '', txt = '';
-  for (let s = 0; s < n; s++) bg += `<rect class="col" data-i="${bi * n + s}" x="${X(s) - stepW / 2 + 1}" y="0" width="${stepW - 2}" height="${H}" rx="6"/>`;
+  for (let s = 0; s < n; s++) bg += `<rect class="col" data-i="${bi * n + s}" x="${X(s) - stepW / 2 + 1}" y="-10" width="${stepW - 2}" height="${H + 10}" rx="6"/>`;
   mus += staffLines(4, W - 4) + `<line class="blk" x1="4" x2="4" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/><line class="blk" x1="${W - 4}" x2="${W - 4}" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/>`;
   for (let s0 = 0; s0 < n; s0 += grpSize) {
     const cells = bar.slice(s0, s0 + grpSize).split(''), nt = beatNotation(cells, grpSize === g.spb ? g.spb : 2);
@@ -349,22 +352,24 @@ function barSvg(bar, g, bi, hs, counts, grpSize) {
       const s = s0 + k, x = X(s), o = nt[k];
       if (o.rest) mus += REST_PATH[o.rest](x);
       if (c === '.') return;
-      const y = NY[c], sx = c === 'S' ? x + 4.6 : c === 's' ? x + 3.4 : x + 5.2, top = 3;
-      mus += `<g class="nn">${headSvg(c, x)}</g><line class="stem" x1="${sx}" x2="${sx}" y1="${top}" y2="${y - (c === 'S' ? 4.6 : 1)}"/>`;
-      if (o.b1 !== undefined) { const ex = X(s0 + o.b1) + (cells[o.b1] === 'S' ? 4.6 : cells[o.b1] === 's' ? 3.4 : 5.2); mus += `<rect class="beam" x="${sx - 0.8}" y="${top}" width="${ex - sx + 1.6}" height="4.4"/>`;
-        if (o.b2 !== undefined) mus += `<rect class="beam" x="${sx - 0.8}" y="${top + 7}" width="${ex - sx + 1.6}" height="4.4"/>`; }
-      if (o.stub) mus += `<rect class="beam" x="${o.stub > 0 ? sx - 0.8 : sx - 7}" y="${top + 7}" width="7.8" height="4.4"/>`;
-      if (o.flags) for (let f = 0; f < o.flags; f++) mus += `<path class="flag" d="M${sx} ${top + f * 7}c1 4 7 5 6 12"/>`;
+      const y = NY[c], up = UP(c), sx = stemX(c, x);
+      if (c === 's' && y < ST_TOP - 2) { /* 譜線上方，不需加線 */ }
+      mus += headSvg(c, x);
+      mus += up ? `<line class="stem" x1="${sx}" x2="${sx}" y1="${UP_TOP}" y2="${y - (c === 's' ? 4 : 1)}"/>` : `<line class="stem" x1="${sx}" x2="${sx}" y1="${y + 1}" y2="${DN_BOT}"/>`;
+      const by1 = up ? UP_TOP : DN_BOT - 4.4, by2 = up ? UP_TOP + 7 : DN_BOT - 11.4;
+      if (o.b1 !== undefined) { const ex = stemX(cells[o.b1], X(s0 + o.b1)); mus += `<rect class="beam" x="${sx - 0.8}" y="${by1}" width="${ex - sx + 1.6}" height="4.4"/>`;
+        if (o.b2 !== undefined) mus += `<rect class="beam" x="${sx - 0.8}" y="${by2}" width="${ex - sx + 1.6}" height="4.4"/>`; }
+      if (o.stub) mus += `<rect class="beam" x="${o.stub > 0 ? sx - 0.8 : sx - 7}" y="${by2}" width="7.8" height="4.4"/>`;
+      if (o.flags) for (let f = 0; f < o.flags; f++) mus += up ? `<path class="flag" d="M${sx} ${UP_TOP + f * 7}c1 4 7 5 6 12"/>` : `<path class="flag" d="M${sx} ${DN_BOT - f * 7}c1 -4 7 -5 6 -12"/>`;
       if (o.dot) mus += `<circle class="dot" cx="${x + 10}" cy="${y - 3}" r="1.8"/>`;
-      if (o.tup) { const last = cells.length - 1 - [...cells].reverse().findIndex(q => q !== '.'); mus += `<text class="tup" x="${(sx + X(s0 + last) + 5) / 2}" y="-3" text-anchor="middle">${o.tup}</text>`; }
+      if (o.tup) { const last = cells.length - 1 - [...cells].reverse().findIndex(q => q !== '.' && UP(q)); mus += `<text class="tup" x="${(sx + X(s0 + last) + 5) / 2}" y="${UP_TOP - 3}" text-anchor="middle">3</text>`; }
     });
   }
   for (let s = 0; s < n; s++) {
-    const isBeat = s % g.spb === 0;
-    txt += `<text class="cnt${isBeat ? '' : ' off'}" x="${X(s)}" y="74" text-anchor="middle">${esc(counts[s])}</text>`;
-    if (hs[s]) txt += `<text class="hand" x="${X(s)}" y="91" text-anchor="middle">${hs[s]}</text>`;
+    txt += `<text class="cnt${s % g.spb === 0 ? '' : ' off'}" x="${X(s)}" y="86" text-anchor="middle">${esc(counts[s])}</text>`;
+    if (hs[s]) txt += `<text class="hand" x="${X(s)}" y="102" text-anchor="middle">${hs[s]}</text>`;
   }
-  return `<svg class="ns" viewBox="0 -12 ${W} ${H + 12}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="第 ${bi + 1} 小節鼓譜">${bg}${mus}${txt}</svg>`;
+  return `<svg class="ns" viewBox="0 -18 ${W} ${H + 18}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="第 ${bi + 1} 小節鼓譜">${bg}${mus}${txt}</svg>`;
 }
 
 let curGrid = null;

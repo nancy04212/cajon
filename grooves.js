@@ -20,8 +20,8 @@ window.GROOVES = [
   { id: 'ghost-intro', name: '鬼音入門律動', en: 'Ghost Note Groove', cat: 'basic', lv: 1, bpm: 70, range: [55, 100], ts: [4, 4], spb: 4,
     bars: ['BsBsSsssBsBsSsss'],
     url: 'https://www.youtube.com/watch?v=f1tn60_zAlI' },
-  { id: 'tone-colors', name: '三種音色練習', en: 'Bass · Tone · Slap', cat: 'basic', lv: 1, bpm: 72, range: [50, 110], ts: [4, 4], spb: 4,
-    bars: ['BBTTSSTTBBTTSSSS'] },
+  { id: 'tone-colors', name: '低音・響音・鬼音', en: 'Bass · Slap · Ghost', cat: 'basic', lv: 1, bpm: 72, range: [50, 110], ts: [4, 4], spb: 4,
+    bars: ['BBssSSssBBssSSSS'] },
 
   // ---- 流行・搖滾
   { id: 'pop-ballad', name: '抒情慢歌', en: 'Pop Ballad', cat: 'ballad', lv: 1, bpm: 66, range: [55, 82], ts: [4, 4], spb: 4,
@@ -39,7 +39,7 @@ window.GROOVES = [
   { id: 'half-time', name: '半拍感', en: 'Half-time', cat: 'ballad', lv: 2, bpm: 75, range: [60, 95], ts: [4, 4], spb: 4,
     bars: ['B.s.s.s.S.s.sBs.'] },
   { id: 'disco', name: '迪斯可', en: 'Disco', cat: 'fast', lv: 1, bpm: 112, range: [100, 128], ts: [4, 4], spb: 4,
-    bars: ['B.T.S.T.B.T.S.T.'] },
+    bars: ['B.S.S.S.B.S.S.S.'] },
   { id: 'pop-punk', name: '流行龐克', en: 'Pop Punk', cat: 'fast', lv: 2, bpm: 160, range: [130, 190], ts: [4, 4], spb: 2,
     bars: ['BSBSBSBS'] },
 
@@ -140,9 +140,9 @@ window.GROOVES = [
   { id: 'fill-break', name: '停頓 Break', en: 'Stop Break', cat: 'fill', lv: 1, bpm: 80, range: [60, 120], ts: [4, 4], spb: 4,
     bars: ['B.s.S.s.B.s.S.s.', 'B.s.S.s.S.......'], note: '後兩拍完全靜止' },
   { id: 'fill-down', name: '下行過門', en: 'High-to-Low Fill', cat: 'fill', lv: 2, bpm: 80, range: [60, 110], ts: [4, 4], spb: 4,
-    bars: ['B.s.S.s.B.s.S.s.', 'B.s.S.s.SSTTBBBB'], note: '響音 → 中音 → 低音' },
+    bars: ['B.s.S.s.B.s.S.s.', 'B.s.S.s.SSSSBBBB'], note: '響音 → 中音 → 低音' },
   { id: 'fill-up', name: '上行過門', en: 'Low-to-High Fill', cat: 'fill', lv: 2, bpm: 80, range: [60, 110], ts: [4, 4], spb: 4,
-    bars: ['B.s.S.s.B.s.S.s.', 'B.s.S.s.BBTTSSSS'], note: '低音 → 中音 → 響音' },
+    bars: ['B.s.S.s.B.s.S.s.', 'B.s.S.s.BBSSSSSS'], note: '低音 → 中音 → 響音' },
   { id: 'fill-sync', name: '切分過門', en: 'Syncopated Fill', cat: 'fill', lv: 2, bpm: 85, range: [65, 115], ts: [4, 4], spb: 4,
     bars: ['B.s.S.s.B.s.S.s.', 'B.s.S.s.S..S..S.'] },
   { id: 'fill-cresc', name: '漸強過門', en: 'Crescendo Fill', cat: 'fill', lv: 2, bpm: 80, range: [60, 110], ts: [4, 4], spb: 4,
@@ -158,7 +158,7 @@ window.GROOVES = [
   { id: 'fill-bass-dbl', name: '低音雙擊過門', en: 'Double Bass Fill', cat: 'fill', lv: 3, bpm: 80, range: [60, 105], ts: [4, 4], spb: 4,
     bars: ['B.s.S.s.B.s.S.s.', 'BBSsBBSsBBSSBBSS'] },
   { id: 'fill-full', name: '整小節過門', en: 'Full-bar Fill', cat: 'fill', lv: 3, bpm: 80, range: [60, 105], ts: [4, 4], spb: 4,
-    bars: ['BsBsSsssBsBsSsss', 'SsSSBsSSTsSSSSSS'] }
+    bars: ['BsBsSsssBsBsSsss', 'SsSSBsSSSsSSSSSS'] }
 ];
 
 window.CREATORS = [
