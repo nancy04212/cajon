@@ -299,77 +299,89 @@ function miniHtml(g) {
   const b = g.bars[0];
   return `<div class="mini">${b.split('').map((c, i) => (i && i % g.spb === 0 ? '<i class="gap"></i>' : '') + `<i class="${c === '.' ? '' : c}"></i>`).join('')}</div>`;
 }
-const NOTE_Y = { S: 22, s: 22, T: 36, B: 50 };
-const keyIcon = c => `<svg class="ki" viewBox="0 0 26 30" aria-hidden="true"><line x1="0" y1="15" x2="26" y2="15" stroke="var(--line-2)" stroke-width="1.5"/>${c === 'S' ? '<path d="M8 3l8 8M16 3l-8 8" stroke="var(--c-S)" stroke-width="2.6" stroke-linecap="round" transform="translate(1 0)"/>' : c === 's' ? '<text x="13" y="11" text-anchor="middle" font-size="10" fill="var(--c-g)" font-weight="700">( • )</text>' : `<ellipse cx="13" cy="${c === 'T' ? 15 : 24}" rx="5.6" ry="4.2" transform="rotate(-20 13 ${c === 'T' ? 15 : 24})" fill="var(--c-${c})"/>`}</svg>`;
+// ---- 音符式鼓譜（SVG，一小節一張）----
+const NY = { S: 24, s: 24, T: 36, B: 48 };               // 響音：上間、中音：中線、低音：下間
+const BEAT_W = 80, PADL = 14, ST_TOP = 20, ST_GAP = 8;   // 五線譜 y=20..52
+const staffLines = (x1, x2) => [0, 1, 2, 3, 4].map(k => `<line x1="${x1}" x2="${x2}" y1="${ST_TOP + k * ST_GAP}" y2="${ST_TOP + k * ST_GAP}" class="sl"/>`).join('');
+function headSvg(c, x) {
+  const y = NY[c];
+  if (c === 'S') return `<path class="hx" d="M${x - 4.6} ${y - 4.6}L${x + 4.6} ${y + 4.6}M${x + 4.6} ${y - 4.6}L${x - 4.6} ${y + 4.6}"/>`;
+  if (c === 's') return `<text class="gp" x="${x}" y="${y + 4}" text-anchor="middle">(  )</text><ellipse class="hd g" cx="${x}" cy="${y}" rx="4.2" ry="3.2" transform="rotate(-20 ${x} ${y})"/>`;
+  return `<ellipse class="hd ${c}" cx="${x}" cy="${y}" rx="5.8" ry="4.3" transform="rotate(-20 ${x} ${y})"/>`;
+}
+const REST_PATH = {
+  4: (x) => `<path class="rs" transform="translate(${x - 5} 22)" d="M3.2 1l4.6 5.3-3 3.7 3.4 4.4c-2.6-.9-4.4.4-2.6 4.6-3.4-2.6-3-6 .2-5.5L2.4 9.6l3-3.8z"/>`,
+  2: (x) => `<g class="rs" transform="translate(${x - 4} 26)"><circle cx="2.4" cy="3" r="2.2"/><path class="rsl" d="M3.4 4.6c1.8.2 3.2-.8 4.3-2.6L4 17"/></g>`,
+  1: (x) => `<g class="rs" transform="translate(${x - 4} 24)"><circle cx="3" cy="3" r="2"/><circle cx="2" cy="9" r="2"/><path class="rsl" d="M4 4.4c1.7.2 3-.7 4-2.4L3.6 21M3.2 10.4c1.6.2 2.8-.6 3.8-2.2"/></g>`
+};
+const keyIcon = c => `<svg class="ki" viewBox="0 14 26 46" aria-hidden="true">${staffLines(0, 26)}${headSvg(c, 13)}</svg>`;
 const legendHtml = () => `<div class="legend">
   <span>${keyIcon('B')}低音</span><span>${keyIcon('T')}中音</span><span>${keyIcon('S')}響音</span><span>${keyIcon('s')}鬼音</span>
   <span><b style="color:var(--text)">R / L</b>&nbsp;右手 / 左手</span></div>`;
-const REST_SVG = {
-  4: '<svg class="nrest q" viewBox="0 0 10 22"><path d="M3.2 1l4.6 5.3-3 3.7 3.4 4.4c-2.6-.9-4.4.4-2.6 4.6-3.4-2.6-3-6 .2-5.5L2.4 9.6l3-3.8z" fill="currentColor"/></svg>',
-  2: '<svg class="nrest e" viewBox="0 0 10 22"><circle cx="3.2" cy="6" r="2.1" fill="currentColor"/><path d="M4.4 7.4c1.7.3 3.1-.7 4.2-2.6L4.8 18.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>',
-  1: '<svg class="nrest s" viewBox="0 0 10 22"><circle cx="3.6" cy="4.6" r="1.9" fill="currentColor"/><circle cx="2.6" cy="10" r="1.9" fill="currentColor"/><path d="M4.6 6c1.7.3 3.1-.7 4.2-2.6L4.4 20M3.8 11.3c1.6.3 2.9-.6 3.9-2.3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>'
-};
-// 把一拍裡的打點換算成音符：時值、符桿、符槓、休止符
+// 一拍內的時值：回傳每格的 {d, beams, b1, b2, stub, flags, dot, rest}
 function beatNotation(cells, spb) {
   const hits = []; cells.forEach((c, i) => { if (c !== '.') hits.push(i); });
   const out = cells.map(() => ({}));
   const beamsOf = d => spb >= 4 ? (d === 1 ? 2 : d <= 3 ? 1 : 0) : (spb >= 2 ? (d === 1 ? 1 : 0) : 0);
   if (!hits.length) { out[0].rest = 4; return out; }
   const lead = hits[0];
-  if (lead) out[0].rest = spb >= 4 ? Math.min(lead, 2) === 1 ? 1 : 2 : 2;
-  hits.forEach((i, k) => { const d = (k + 1 < hits.length ? hits[k + 1] : cells.length) - i; out[i].d = d; out[i].beams = beamsOf(d); out[i].dot = spb >= 4 && d === 3; });
+  if (lead) out[0].rest = spb >= 4 && lead === 1 ? 1 : 2;
+  hits.forEach((i, k) => { const d = (k + 1 < hits.length ? hits[k + 1] : cells.length) - i; Object.assign(out[i], { d, beams: beamsOf(d), dot: spb >= 4 && d === 3 }); });
   if (hits.length > 1) {
     hits.forEach((i, k) => {
       const nx = hits[k + 1], pv = hits[k - 1];
-      if (nx !== undefined) { out[i].b1 = nx - i; if (out[i].beams === 2 && out[nx].beams === 2) out[i].b2 = nx - i; }
-      if (out[i].beams === 2 && !out[i].b2 && !(pv !== undefined && out[pv].b2)) out[i].stub = nx !== undefined ? 'r' : 'l';
+      if (nx !== undefined) { out[i].b1 = nx; if (out[i].beams === 2 && out[nx].beams === 2) out[i].b2 = nx; }
+      if (out[i].beams === 2 && out[i].b2 === undefined && !(pv !== undefined && out[pv].b2 !== undefined)) out[i].stub = nx !== undefined ? 1 : -1;
     });
-    if (spb === 3) out[hits[0]].tup = 3;
+    if (spb === 3 || spb === 6) out[hits[0]].tup = spb === 3 ? 3 : 6;
   } else if (out[hits[0]].beams) out[hits[0]].flags = out[hits[0]].beams;
   return out;
 }
-function noteHtml(c, nt) {
-  let h = '';
-  if (nt.rest) h += REST_SVG[nt.rest];
-  if (c === '.') return h;
-  const y = NOTE_Y[c];
-  h += c === 'S' ? `<i class="nx" style="top:${y}px"></i>` : `<i class="nh ${c}" style="top:${y}px"></i>`;
-  if (nt.d < 4 || true) h += `<i class="nstem" style="height:${y - 3}px"></i>`;
-  if (nt.b1) h += `<i class="nbeam" style="width:calc(${nt.b1} * (100% + 2px))"></i>`;
-  if (nt.b2) h += `<i class="nbeam b2" style="width:calc(${nt.b2} * (100% + 2px))"></i>`;
-  if (nt.stub) h += `<i class="nbeam b2 stub ${nt.stub}"></i>`;
-  if (nt.flags) h += `<i class="nflag"></i>` + (nt.flags > 1 ? `<i class="nflag f2"></i>` : '');
-  if (nt.dot) h += `<i class="ndot" style="top:${y}px"></i>`;
-  if (nt.tup) h += `<b class="ntup">3</b>`;
-  return h;
+function barSvg(bar, g, bi, hs, counts, grpSize) {
+  const n = bar.length, beats = n / g.spb, stepW = BEAT_W / g.spb, W = PADL + beats * BEAT_W + 8, H = 98;
+  const X = s => PADL + s * stepW + stepW / 2;
+  let bg = '', mus = '', txt = '';
+  for (let s = 0; s < n; s++) bg += `<rect class="col" data-i="${bi * n + s}" x="${X(s) - stepW / 2 + 1}" y="0" width="${stepW - 2}" height="${H}" rx="6"/>`;
+  mus += staffLines(4, W - 4) + `<line class="blk" x1="4" x2="4" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/><line class="blk" x1="${W - 4}" x2="${W - 4}" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/>`;
+  for (let s0 = 0; s0 < n; s0 += grpSize) {
+    const cells = bar.slice(s0, s0 + grpSize).split(''), nt = beatNotation(cells, grpSize === g.spb ? g.spb : 2);
+    cells.forEach((c, k) => {
+      const s = s0 + k, x = X(s), o = nt[k];
+      if (o.rest) mus += REST_PATH[o.rest](x);
+      if (c === '.') return;
+      const y = NY[c], sx = c === 'S' ? x + 4.6 : c === 's' ? x + 3.4 : x + 5.2, top = 3;
+      mus += `<g class="nn">${headSvg(c, x)}</g><line class="stem" x1="${sx}" x2="${sx}" y1="${top}" y2="${y - (c === 'S' ? 4.6 : 1)}"/>`;
+      if (o.b1 !== undefined) { const ex = X(s0 + o.b1) + (cells[o.b1] === 'S' ? 4.6 : cells[o.b1] === 's' ? 3.4 : 5.2); mus += `<rect class="beam" x="${sx - 0.8}" y="${top}" width="${ex - sx + 1.6}" height="4.4"/>`;
+        if (o.b2 !== undefined) mus += `<rect class="beam" x="${sx - 0.8}" y="${top + 7}" width="${ex - sx + 1.6}" height="4.4"/>`; }
+      if (o.stub) mus += `<rect class="beam" x="${o.stub > 0 ? sx - 0.8 : sx - 7}" y="${top + 7}" width="7.8" height="4.4"/>`;
+      if (o.flags) for (let f = 0; f < o.flags; f++) mus += `<path class="flag" d="M${sx} ${top + f * 7}c1 4 7 5 6 12"/>`;
+      if (o.dot) mus += `<circle class="dot" cx="${x + 10}" cy="${y - 3}" r="1.8"/>`;
+      if (o.tup) { const last = cells.length - 1 - [...cells].reverse().findIndex(q => q !== '.'); mus += `<text class="tup" x="${(sx + X(s0 + last) + 5) / 2}" y="-3" text-anchor="middle">${o.tup}</text>`; }
+    });
+  }
+  for (let s = 0; s < n; s++) {
+    const isBeat = s % g.spb === 0;
+    txt += `<text class="cnt${isBeat ? '' : ' off'}" x="${X(s)}" y="74" text-anchor="middle">${esc(counts[s])}</text>`;
+    if (hs[s]) txt += `<text class="hand" x="${X(s)}" y="91" text-anchor="middle">${hs[s]}</text>`;
+  }
+  return `<svg class="ns" viewBox="0 -12 ${W} ${H + 12}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="第 ${bi + 1} 小節鼓譜">${bg}${mus}${txt}</svg>`;
 }
 
 let curGrid = null;
-function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
-  const n = g.ts[0] * g.spb, hands = handsFor(g), counts = countsFor(g);
-  const cols = [];
+function renderGrid(el, g, { autoScroll = true } = {}) {
+  const n = g.ts[0] * g.spb, hands = handsFor(g), counts = countsFor(g), cols = [];
   el.innerHTML = '';
   el.className = 'bars' + (g.bars.length > 1 && n <= 16 ? ' two' : '');
   el._g = g;
+  const grpSize = g.counts ? 2 : g.spb;
   g.bars.forEach((bar, bi) => {
     const hs = useSplit(g) ? handsFor(g, bar) : hands;
-    const bd = document.createElement('div'); bd.className = 'bar' + (n > 16 ? ' wide' : '');
-    let h = `<div class="bn">第 ${bi + 1} 小節</div><div class="row-g">`;
-    const grpSize = g.counts ? 2 : g.spb; // bulerías: group per count
-    const nts = [];
-    for (let s0 = 0; s0 < n; s0 += grpSize) nts.push(...beatNotation(bar.slice(s0, s0 + grpSize).split(''), grpSize === g.spb ? g.spb : 2));
-    for (let s = 0; s < n; s++) {
-      if (s % grpSize === 0) h += (s ? '</div>' : '') + '<div class="grp">';
-      const c = bar[s]; const idx = bi * n + s;
-      const cnt = counts[s]; const isBeat = s % g.spb === 0;
-      h += `<div class="col${editable ? ' edit' : ''}${s && s % grpSize === 0 ? ' g0' : ''}" data-i="${idx}"><div class="nt">${noteHtml(c, nts[s])}</div><div class="c${isBeat ? '' : ' off'}">${esc(cnt)}</div><div class="h">${hs[s]}</div></div>`;
-    }
-    h += '</div></div>';
-    bd.innerHTML = h; el.appendChild(bd);
+    const bd = document.createElement('div'); bd.className = 'bar';
+    bd.innerHTML = `<div class="bn">第 ${bi + 1} 小節</div>` + barSvg(bar, g, bi, hs, counts, grpSize);
+    el.appendChild(bd);
   });
-  $$('.col', el).forEach(c => cols[+c.dataset.i] = c);
-  const map = { cols, prev: null, prevBar: null, autoScroll };
-  return map;
+  $$('rect.col', el).forEach(c => cols[+c.dataset.i] = c);
+  return { cols, prev: null, prevBar: null, autoScroll };
 }
 
 /* ---------- UI helpers ---------- */
@@ -906,7 +918,7 @@ function shell() {
   const tabs = [['metro', '節拍器', I.metro], ['library', '節奏庫', I.lib], ['songs', '歌曲', I.song], ['me', '我的', I.me]];
   const tabHtml = tabs.map(([k, l, ic]) => `<button class="tab" data-go="${k}">${ic}<span>${l}</span></button>`).join('');
   document.body.innerHTML = `<div class="app">
-    <nav class="side" aria-label="主選單"><div class="brand"><img src="${window.CAJON_ICON || 'icon-192.png'}" alt=""><div><b>Cajon</b><small>木箱鼓節拍訓練</small></div></div>${tabHtml}<div class="foot">B 低音・T 中音<br>S 響音・s 鬼音</div></nav>
+    <nav class="side" aria-label="主選單"><div class="brand"><img src="${window.CAJON_ICON || 'icon-192.png'}" alt=""><div><b>Cajon</b><small>木箱鼓節拍訓練</small></div></div>${tabHtml}</nav>
     <main class="main" id="main"></main>
     <nav class="tabbar" aria-label="主選單">${tabHtml}</nav></div>
     <div class="toast" id="toast" role="status"></div><div class="ci-badge num" id="ci"></div>`;

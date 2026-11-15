@@ -437,31 +437,24 @@ html.land .yt-box{max-height:calc(100vh - var(--safe-t) - 170px);margin:0 auto}
 
 .yt-tap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:3;pointer-events:none;background:rgba(0,0,0,.72);color:#fff;font-weight:700;font-size:14px;padding:8px 14px;border-radius:99px;white-space:nowrap}
 
-/* ===== 五線譜式鼓譜（音符） ===== */
-.legend .ki{width:24px;height:28px;flex:none;margin-right:2px;vertical-align:middle}
+/* ===== 音符式鼓譜 ===== */
+.legend .ki{width:24px;height:30px;flex:none;margin-right:4px}
 .legend span{display:inline-flex;align-items:center}
-.bar .row-g{position:relative}
-.bar .row-g::before{content:'';position:absolute;left:0;right:0;top:39px;height:1.5px;background:var(--line-2);pointer-events:none}
-.col{grid-template-rows:64px 18px 14px}
-.nt{position:relative;width:100%;height:64px;color:var(--text)}
-.nt .nh{position:absolute;left:50%;width:12px;height:9px;margin:-4.5px 0 0 -6px;border-radius:50%;transform:rotate(-20deg);transition:transform .08s}
-.nt .nh.B{background:var(--c-B)} .nt .nh.T{background:var(--c-T)}
-.nt .nh.s{width:8px;height:6px;margin:-3px 0 0 -4px;background:var(--c-g)}
-.nt .nh.s::before,.nt .nh.s::after{content:'(';position:absolute;top:-6px;left:-6px;font-size:11px;font-weight:700;color:var(--c-g);transform:rotate(20deg)}
-.nt .nh.s::after{content:')';left:auto;right:-6px}
-.nt .nx{position:absolute;left:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;transition:transform .08s}
-.nt .nx::before,.nt .nx::after{content:'';position:absolute;left:50%;top:-1px;width:2.6px;height:13px;margin-left:-1.3px;border-radius:2px;background:var(--c-S);transform:rotate(45deg)}
-.nt .nx::after{transform:rotate(-45deg)}
-.nt .nstem{position:absolute;left:calc(50% + 4.6px);top:3px;width:1.6px;background:currentColor}
-.nt .nbeam{position:absolute;left:calc(50% + 4.6px);top:3px;height:4px;background:currentColor;border-radius:1px}
-.nt .nbeam.b2{top:9.5px}
-.nt .nbeam.stub{width:7px}
-.nt .nbeam.stub.l{left:calc(50% + 4.6px - 7px)}
-.nt .nflag{position:absolute;left:calc(50% + 5.5px);top:3px;width:6px;height:12px;border-right:2px solid currentColor;border-top:2px solid currentColor;border-radius:0 8px 0 0;transform:skewY(30deg)}
-.nt .nflag.f2{top:9px}
-.nt .ndot{position:absolute;left:calc(50% + 9px);width:3.4px;height:3.4px;margin-top:-6px;border-radius:50%;background:currentColor}
-.nt .ntup{position:absolute;left:calc(150% + 2px);top:-11px;font-size:10px;font-weight:800;color:var(--text-2)}
-.nt .nrest{position:absolute;left:50%;top:27px;width:9px;height:20px;margin-left:-4.5px;color:var(--text-2)}
-.col.on .nh{transform:rotate(-20deg) scale(1.35)}
-.col.on .nx{transform:scale(1.3)}
-.col.on .nt{color:var(--accent)}
+.bar{padding:8px 10px 6px}
+.ns{display:block;width:100%;max-width:620px;height:auto;margin:0 auto;overflow:visible;font-family:inherit}
+.ns .col{fill:transparent;transition:fill .08s}
+.ns .col.on{fill:color-mix(in srgb,var(--accent) 22%,transparent)}
+:is(.ns,.ki) .sl{stroke:var(--text-3);stroke-width:.8;opacity:.55}
+.ns .blk{stroke:var(--text-2);stroke-width:1.2}
+.ns .stem{stroke:var(--text);stroke-width:1.4}
+.ns .beam,.ns .rs,.ns .dot{fill:var(--text)}
+.ns .rsl,.ns .flag{fill:none;stroke:var(--text);stroke-width:1.5;stroke-linecap:round}
+.ns .rs .rsl{stroke:var(--text)}
+:is(.ns,.ki) .hd.B{fill:var(--c-B)} :is(.ns,.ki) .hd.T{fill:var(--c-T)} :is(.ns,.ki) .hd.g{fill:var(--c-g)}
+:is(.ns,.ki) .hx{stroke:var(--c-S);stroke-width:2.6;stroke-linecap:round;fill:none}
+:is(.ns,.ki) .gp{font-size:10px;font-weight:700;fill:var(--c-g);letter-spacing:1px}
+.ns .tup{font-size:10px;font-weight:800;fill:var(--text-2)}
+.ns .cnt{font-size:13px;font-weight:800;fill:var(--text);font-variant-numeric:tabular-nums}
+.ns .cnt.off{font-weight:600;fill:var(--text-3)}
+.ns .hand{font-size:11px;font-weight:700;fill:var(--text-3)}
+.ns .nn{transform-box:fill-box;transform-origin:center;transition:transform .08s}
