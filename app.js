@@ -307,10 +307,10 @@ const BEAT_W = 80, PADL = 14, ST_TOP = 20, ST_GAP = 8, UP_TOP = -6, DN_BOT = 68;
 const staffLines = (x1, x2) => [0, 1, 2, 3, 4].map(k => `<line x1="${x1}" x2="${x2}" y1="${ST_TOP + k * ST_GAP}" y2="${ST_TOP + k * ST_GAP}" class="sl"/>`).join('');
 function headSvg(c, x) {
   const y = NY[c];
-  if (c === 's') return `<path class="hx" d="M${x - 4.2} ${y - 4.2}L${x + 4.2} ${y + 4.2}M${x + 4.2} ${y - 4.2}L${x - 4.2} ${y + 4.2}"/>`;
-  return `<ellipse class="hd ${c === 'B' ? 'B' : 'S'}" cx="${x}" cy="${y}" rx="5.8" ry="4.3" transform="rotate(-20 ${x} ${y})"/>`;
+  if (c === 's') return `<path class="hx" d="M${x - 4.6} ${y - 4.6}L${x + 4.6} ${y + 4.6}M${x + 4.6} ${y - 4.6}L${x - 4.6} ${y + 4.6}"/>`;
+  return `<ellipse class="hd ${c === 'B' ? 'B' : 'S'}" cx="${x}" cy="${y}" rx="6.4" ry="4.6" transform="rotate(-20 ${x} ${y})"/>`;
 }
-const stemX = (c, x) => c === 's' ? x + 4.2 : UP(c) ? x + 5.2 : x - 5.2;
+const stemX = (c, x) => c === 's' ? x + 4.6 : UP(c) ? x + 5.8 : x - 5.8;
 const REST_PATH = {
   4: (x) => `<path class="rs" transform="translate(${x - 5} 22)" d="M3.2 1l4.6 5.3-3 3.7 3.4 4.4c-2.6-.9-4.4.4-2.6 4.6-3.4-2.6-3-6 .2-5.5L2.4 9.6l3-3.8z"/>`,
   2: (x) => `<g class="rs" transform="translate(${x - 4} 26)"><circle cx="2.4" cy="3" r="2.2"/><path class="rsl" d="M3.4 4.6c1.8.2 3.2-.8 4.3-2.6L4 17"/></g>`,
@@ -342,14 +342,14 @@ function beatNotation(cells, spb) {
   return out;
 }
 function barSvg(bar, g, bi, hs, counts, grpSize) {
-  const n = bar.length, beats = n / g.spb, stepW = BEAT_W / g.spb, W = PADL + beats * BEAT_W + 8, H = 104;
+  const n = bar.length, stepW = Math.max(16, Math.min(40, 320 / n)), W = PADL + n * stepW + 8, H = 104;
   const X = s => PADL + s * stepW + stepW / 2;
   let bg = '', mus = '', txt = '';
   for (let s = 0; s < n; s++) bg += `<rect class="col" data-i="${bi * n + s}" x="${X(s) - stepW / 2 + 1}" y="-10" width="${stepW - 2}" height="${H + 10}" rx="6"/>`;
   mus += staffLines(4, W - 4) + `<line class="blk" x1="4" x2="4" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/><line class="blk" x1="${W - 4}" x2="${W - 4}" y1="${ST_TOP}" y2="${ST_TOP + 4 * ST_GAP}"/>`;
   for (let s0 = grpSize; s0 < n; s0 += grpSize) { const bx = PADL + s0 * stepW; mus += `<line class="bsep" x1="${bx}" x2="${bx}" y1="-12" y2="${H - 2}"/>`; }
   for (let s0 = 0; s0 < n; s0 += grpSize) {
-    const cells = bar.slice(s0, s0 + grpSize).split(''), nt = beatNotation(cells, grpSize === g.spb ? g.spb : 2);
+    const cells = bar.slice(s0, s0 + grpSize).split(''), nt = beatNotation(cells, grpSize === g.spb ? g.spb : g.ts[1] === 8 ? 4 : 2);
     cells.forEach((c, k) => {
       const s = s0 + k, x = X(s), o = nt[k];
       if (o.rest) mus += REST_PATH[o.rest](x);
@@ -380,7 +380,7 @@ function renderGrid(el, g, { autoScroll = true } = {}) {
   el.innerHTML = '';
   el.className = 'bars' + (g.bars.length > 1 && n <= 16 ? ' two' : '');
   el._g = g;
-  const grpSize = g.counts ? 2 : g.spb;
+  const grpSize = g.counts ? 2 : (g.ts[1] === 8 && g.ts[0] % 3 === 0 ? 3 * g.spb : g.spb);
   g.bars.forEach((bar, bi) => {
     const hs = useSplit(g) ? handsFor(g, bar) : hands;
     const bd = document.createElement('div'); bd.className = 'bar';
@@ -492,7 +492,7 @@ function viewMetro(v) {
         <div class="bpm-touch" id="bpmTouch"><div class="bpm-big num" id="bpmBig"></div><div class="bpm-unit">‹ BPM ›</div></div>
         <button class="round-btn" id="bp" aria-label="加速">${I.plus}</button>
       </div>
-      <div class="nbeats" id="beats"></div>
+      <div class="beats" id="beats"></div>
       <div class="beat-hint" id="gapState"></div>
       <button class="play-xl" data-play="metro" aria-label="播放"></button>
     </div>
@@ -507,7 +507,7 @@ function viewMetro(v) {
         <div class="row" style="margin-top:14px;gap:12px"><span style="color:var(--text-2);font-size:13px;font-weight:600;white-space:nowrap">音量</span><input type="range" min="0" max="100" id="vol" class="slider"></div>
       </div>
       <div class="section-t">快速選速</div>
-      <div class="chips" id="presets">${[60, 70, 80, 90, 100, 110, 120, 140].map(b => `<button class="chip" data-b="${b}">${b}</button>`).join('')}</div>
+      <div class="chips presets" id="presets">${[60, 70, 80, 90, 100, 110, 120, 140].map(b => `<button class="chip" data-b="${b}">${b}</button>`).join('')}</div>
       <details class="adv"${S.trainer || S.gap ? ' open' : ''}><summary>進階練習<small>${S.trainer ? '速度訓練中' : S.gap ? '靜音訓練中' : '速度訓練・靜音訓練'}</small><button class="help" id="mHelp" aria-label="說明">?</button></summary>
       <div class="list">
         <div class="li"><div class="lbl">速度訓練<small>每 ${S.trEvery} 小節 +${S.trStep}，至 ${S.trMax}</small></div><button class="btn sm" id="trSet">設定</button><button class="switch ${S.trainer ? 'on' : ''}" id="trSw" aria-label="速度訓練"></button></div>
@@ -598,6 +598,9 @@ function viewGroove(v, id) {
   <div class="tags"><span class="tag">${cat ? cat.name : '我的節奏'}</span><span class="tag num">${tsLabel(g)}</span><span class="tag">${LV[g.lv || 1]} ${levelHtml(g.lv || 1)}</span><span class="tag num">建議 ${g.range ? g.range.join('–') : g.bpm} BPM</span><span class="tag">${g.bars.length} 小節循環</span></div>
   <div class="card">${legendHtml()}<div id="grid"></div></div>
   ${g.note ? `<div class="note">${I.bulb}${esc(g.note)}</div>` : ''}
+  <details class="adv"${S.gTrainer ? ' open' : ''}><summary>進階練習<small>${S.gTrainer ? '速度訓練中' : '速度訓練'}</small></summary>
+    <div class="list"><div class="li"><div class="grow"><b>速度訓練</b><small>每練幾次自動加快一點</small></div><button class="tg" data-t="gTrainer">${I.rocket}${S.gTrainer ? '開啟中' : '開啟'}</button></div></div>
+  </details>
   <div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn sm" href="${esc(ref)}" target="_blank" rel="noopener">${I.video}${g.url ? '觀看示範影片' : '搜尋示範影片'}</a></div>
   <div class="dock">
     <div class="dock-main">
@@ -608,8 +611,6 @@ function viewGroove(v, id) {
       <button class="tg" data-t="gDrum">${I.drum}鼓聲</button>
       <button class="tg" data-t="gClick">${I.click}節拍</button>
       <button class="tg" data-t="gCount">${I.count}預備拍</button>
-      <button class="tg" data-t="gTrainer">${I.rocket}速度訓練</button>
-      <button class="tg" id="tapG">TAP</button>
     </div>
     <div class="trainer-status" id="trs"></div>
   </div>`;
@@ -624,9 +625,8 @@ function viewGroove(v, id) {
   holdRepeat($('#m', v), () => setBpm(bpm - 1)); holdRepeat($('#p', v), () => setBpm(bpm + 1));
   const syncT = () => $$('.tg[data-t]', v).forEach(b => b.classList.toggle('on', !!S[b.dataset.t]));
   syncT();
-  $$('.tg[data-t]', v).forEach(b => b.onclick = () => { const k = b.dataset.t; S[k] = !S[k]; saveS(); syncT(); if (k === 'gTrainer') { upTr(); toast(S.gTrainer ? '速度訓練已開啟' : '速度訓練已關閉'); } });
-  $('#pHelp', v).onclick = () => helpSheet([['鼓聲', '播放木箱鼓示範。<br>關掉就只剩節拍，自己打。'], ['節拍', '同時播放節拍器。'], ['預備拍', '開始前先數一小節。'], ['速度訓練', '每循環幾次自動加快，<br>到目標速度就停。'], ['混音', '調整鼓聲、節拍音量，<br>以及 Swing 搖擺感。'], ['TAP', '跟著歌曲點幾下，<br>自動算出速度。']]);
-  $('#tapG', v).onclick = () => { const b = tapper.tap(); if (b) setBpm(b); };
+  $$('.tg[data-t]', v).forEach(b => b.onclick = () => { const k = b.dataset.t; S[k] = !S[k]; saveS(); syncT(); if (k === 'gTrainer') { upTr(); b.lastChild.textContent = S.gTrainer ? '開啟中' : '開啟'; const sm = $('.adv summary small', v); if (sm) sm.textContent = S.gTrainer ? '速度訓練中' : '速度訓練'; toast(S.gTrainer ? '速度訓練已開啟' : '速度訓練已關閉'); } });
+  $('#pHelp', v).onclick = () => helpSheet([['鼓聲', '播放木箱鼓示範。<br>關掉就只剩節拍，自己打。'], ['節拍', '同時播放節拍器。'], ['預備拍', '開始前先數一小節。'], ['速度訓練', '每循環幾次自動加快，<br>到目標速度就停。']]);
   $('#fav', v).onclick = e => { favs.has(id) ? favs.delete(id) : favs.add(id); store.set('favs', [...favs]); const on = favs.has(id); e.currentTarget.innerHTML = on ? I.starF : I.star; e.currentTarget.style.color = on ? 'var(--amber)' : 'inherit'; toast(on ? '已加入收藏' : '已取消收藏'); };
   const G = prep(g, () => bpm);
   G.onLoop = (loop, t) => { const mx = S.gTrMax || (g.range ? g.range[1] : bpm + 30); if (loop % S.gTrEvery === 0 && bpm < mx) { bpm = Math.min(mx, bpm + S.gTrStep); S.gBpm[id] = bpm; saveS(); visQ.push({ t, k: 'gbpm', bpm }); } };
@@ -771,7 +771,7 @@ function viewSong(v, id) {
       <div class="fine now-hint" id="nowHint"></div>
     </div>
     <div>
-      <div class="section-t">段落${song.drums && !song.custom ? '<small>依影片鼓譜判斷有鼓、無鼓</small>' : ''}</div>
+      <div class="section-t row" style="justify-content:space-between;align-items:center"><span>段落${song.drums && !song.custom ? '<small>依影片鼓譜判斷有鼓、無鼓</small>' : ''}</span><button class="tg" id="loopT">${I.loop}循環此段</button></div>
       <div class="secs" id="secs">${plan.secs.map((s, k) => `<button class="secchip${s.g.id === 'rest' ? ' rest' : ''}" data-k="${k}"><b>${esc(s.name)}</b><small class="num">${s.g.id === 'rest' ? '無鼓・' : ''}${s.bars} 小節</small></button>`).join('')}</div>
       ${song.yt ? `<div class="card sync" id="syncCard" style="margin-top:16px">
         <div class="row"><div class="grow" style="flex:1"><b>對拍</b><small id="syncHint"></small></div><button class="help" id="sHelp" aria-label="說明">?</button></div>
@@ -785,7 +785,6 @@ function viewSong(v, id) {
     <div class="dock-main">
       <button class="play-lg" id="play" aria-label="播放">${I.play}</button>
       <div class="bpm-mini"><button class="icon-btn" id="m" aria-label="減速">${I.minus}</button><div class="bpm-touch" id="bvw"><div class="v num" id="bv"></div><div class="u">‹ BPM ›</div></div><button class="icon-btn" id="p" aria-label="加速">${I.plus}</button></div>
-      <button class="tg" id="loopT">${I.loop}循環此段</button>
     </div>
   </div>`;
   const playBtn = $('#play', v), beatsEl = $('#beats', v);
@@ -938,7 +937,7 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); const d = (e.key === 'ArrowUp' ? 1 : -1) * (e.shiftKey ? 5 : 1);
     if (route.name === 'metro') { S.bpm = clamp(S.bpm + d, 20, 300); saveS(); refreshBpm(); }
     else adjBpm?.(d);
-  } else if (e.key === 't' || e.key === 'T') { ($('#tap') || $('#tapG'))?.click(); }
+  } else if (e.key === 't' || e.key === 'T') { $('#tap')?.click(); }
 });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && A.playing) keepAwake(true); });
 window.__cajonDebug = () => ({ allSongs, songPlan, drumSections, findGroove, DRUMS, S });
