@@ -45,9 +45,10 @@ const store = {
 const S = Object.assign({
   theme: 'auto', bpm: 90, ts: [4, 4], sub: '1', sound: 'wood', accents: [3, 2, 2, 2], vol: 0.85,
   trainer: false, trStep: 5, trEvery: 4, trMax: 140, gap: false, gapPlay: 2, gapMute: 2,
-  gClick: true, gDrum: true, gCount: true, gSwing: 0, gTrainer: false, gTrStep: 3, gTrEvery: 4, gTrMax: 0,
+  gClick: false, gDrum: true, gCount: true, gSwing: 0, gTrainer: false, gTrStep: 3, gTrEvery: 4, gTrMax: 0,
   drumVol: 1, clickVol: 0.55, gBpm: {}, hands: 'alt'
 }, store.get('settings', {}));
+if (!S._v3) { S.gClick = false; S._v3 = 1; }
 const saveS = () => store.set('settings', S);
 let favs = new Set(store.get('favs', []));
 let customs = store.get('customs', []);
@@ -105,11 +106,13 @@ function noise(t, peak, dec, ftype, freq, q = 1, att = 0.001) {
   env(g, t, peak, dec, att); s.connect(f); f.connect(g); g.connect(A.out);
   s.start(t, Math.random() * 0.5); s.stop(t + dec + 0.05);
 }
+// 木箱鼓音色：低音＝箱體共鳴、中音＝邊緣開放音、響音＝邊角拍擊帶響線、鬼音＝指尖輕點
+function wires(t, peak, dec) { noise(t, peak, dec, 'bandpass', 3800, 0.6); noise(t, peak * 0.5, dec * 0.7, 'highpass', 6500, 0.5); }
 const cajon = {
-  B(t, v) { osc('sine', 130, 52, t, 1.1 * v, 0.42, 0.11); osc('triangle', 95, 60, t, 0.35 * v, 0.18); noise(t, 0.25 * v, 0.04, 'lowpass', 600); },
-  T(t, v) { osc('triangle', 260, 175, t, 0.55 * v, 0.2, 0.06); osc('sine', 180, 140, t, 0.4 * v, 0.22); noise(t, 0.28 * v, 0.07, 'bandpass', 1400, 1.2); },
-  S(t, v) { noise(t, 0.95 * v, 0.13, 'bandpass', 3200, 0.8); noise(t, 0.4 * v, 0.24, 'highpass', 5500, 0.7); osc('triangle', 380, 260, t, 0.35 * v, 0.06, 0.03); },
-  s(t, v) { noise(t, 0.22 * v, 0.06, 'bandpass', 3000, 0.9); noise(t, 0.08 * v, 0.1, 'highpass', 6000); }
+  B(t, v) { osc('sine', 112, 58, t, 1.15 * v, 0.34, 0.07); osc('sine', 175, 105, t, 0.28 * v, 0.07, 0.03); noise(t, 0.38 * v, 0.045, 'lowpass', 420, 0.7); wires(t + 0.004, 0.05 * v, 0.1); },
+  T(t, v) { osc('sine', 245, 195, t, 0.62 * v, 0.17, 0.05); osc('triangle', 470, 360, t, 0.16 * v, 0.05, 0.02); noise(t, 0.3 * v, 0.05, 'bandpass', 950, 1.6); wires(t + 0.003, 0.16 * v, 0.14); },
+  S(t, v) { noise(t, 0.85 * v, 0.045, 'highpass', 2000, 0.8, 0.0005); noise(t, 0.3 * v, 0.06, 'bandpass', 520, 3.5); osc('triangle', 820, 560, t, 0.16 * v, 0.03, 0.015); wires(t + 0.002, 0.5 * v, 0.2); },
+  s(t, v) { noise(t, 0.16 * v, 0.035, 'bandpass', 3400, 1.1, 0.0008); wires(t + 0.002, 0.06 * v, 0.08); }
 };
 const SOUNDS = {
   wood: { name: '木魚', play(t, k, v) { const f = k === 'accent' ? 1650 : k === 'sub' ? 1050 : 1250; const p = k === 'accent' ? 1 : k === 'beat' ? 0.7 : k === 'soft' ? 0.35 : 0.3;
@@ -296,12 +299,50 @@ function miniHtml(g) {
   const b = g.bars[0];
   return `<div class="mini">${b.split('').map((c, i) => (i && i % g.spb === 0 ? '<i class="gap"></i>' : '') + `<i class="${c === '.' ? '' : c}"></i>`).join('')}</div>`;
 }
+const NOTE_Y = { S: 22, s: 22, T: 36, B: 50 };
+const keyIcon = c => `<svg class="ki" viewBox="0 0 26 30" aria-hidden="true"><line x1="0" y1="15" x2="26" y2="15" stroke="var(--line-2)" stroke-width="1.5"/>${c === 'S' ? '<path d="M8 3l8 8M16 3l-8 8" stroke="var(--c-S)" stroke-width="2.6" stroke-linecap="round" transform="translate(1 0)"/>' : c === 's' ? '<text x="13" y="11" text-anchor="middle" font-size="10" fill="var(--c-g)" font-weight="700">( • )</text>' : `<ellipse cx="13" cy="${c === 'T' ? 15 : 24}" rx="5.6" ry="4.2" transform="rotate(-20 13 ${c === 'T' ? 15 : 24})" fill="var(--c-${c})"/>`}</svg>`;
 const legendHtml = () => `<div class="legend">
-  <span><i class="k" style="background:var(--c-B);color:var(--on-B)">B</i>低音 Bass</span>
-  <span><i class="k" style="background:var(--c-T);color:var(--on-T)">T</i>中音 Tone</span>
-  <span><i class="k" style="background:var(--c-S);color:var(--on-S)">S</i>響音 Slap</span>
-  <span><i class="k" style="color:var(--c-g);box-shadow:inset 0 0 0 1.5px var(--c-g)">s</i>鬼音 Ghost</span>
+  <span>${keyIcon('B')}低音</span><span>${keyIcon('T')}中音</span><span>${keyIcon('S')}響音</span><span>${keyIcon('s')}鬼音</span>
   <span><b style="color:var(--text)">R / L</b>&nbsp;右手 / 左手</span></div>`;
+const REST_SVG = {
+  4: '<svg class="nrest q" viewBox="0 0 10 22"><path d="M3.2 1l4.6 5.3-3 3.7 3.4 4.4c-2.6-.9-4.4.4-2.6 4.6-3.4-2.6-3-6 .2-5.5L2.4 9.6l3-3.8z" fill="currentColor"/></svg>',
+  2: '<svg class="nrest e" viewBox="0 0 10 22"><circle cx="3.2" cy="6" r="2.1" fill="currentColor"/><path d="M4.4 7.4c1.7.3 3.1-.7 4.2-2.6L4.8 18.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>',
+  1: '<svg class="nrest s" viewBox="0 0 10 22"><circle cx="3.6" cy="4.6" r="1.9" fill="currentColor"/><circle cx="2.6" cy="10" r="1.9" fill="currentColor"/><path d="M4.6 6c1.7.3 3.1-.7 4.2-2.6L4.4 20M3.8 11.3c1.6.3 2.9-.6 3.9-2.3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>'
+};
+// 把一拍裡的打點換算成音符：時值、符桿、符槓、休止符
+function beatNotation(cells, spb) {
+  const hits = []; cells.forEach((c, i) => { if (c !== '.') hits.push(i); });
+  const out = cells.map(() => ({}));
+  const beamsOf = d => spb >= 4 ? (d === 1 ? 2 : d <= 3 ? 1 : 0) : (spb >= 2 ? (d === 1 ? 1 : 0) : 0);
+  if (!hits.length) { out[0].rest = 4; return out; }
+  const lead = hits[0];
+  if (lead) out[0].rest = spb >= 4 ? Math.min(lead, 2) === 1 ? 1 : 2 : 2;
+  hits.forEach((i, k) => { const d = (k + 1 < hits.length ? hits[k + 1] : cells.length) - i; out[i].d = d; out[i].beams = beamsOf(d); out[i].dot = spb >= 4 && d === 3; });
+  if (hits.length > 1) {
+    hits.forEach((i, k) => {
+      const nx = hits[k + 1], pv = hits[k - 1];
+      if (nx !== undefined) { out[i].b1 = nx - i; if (out[i].beams === 2 && out[nx].beams === 2) out[i].b2 = nx - i; }
+      if (out[i].beams === 2 && !out[i].b2 && !(pv !== undefined && out[pv].b2)) out[i].stub = nx !== undefined ? 'r' : 'l';
+    });
+    if (spb === 3) out[hits[0]].tup = 3;
+  } else if (out[hits[0]].beams) out[hits[0]].flags = out[hits[0]].beams;
+  return out;
+}
+function noteHtml(c, nt) {
+  let h = '';
+  if (nt.rest) h += REST_SVG[nt.rest];
+  if (c === '.') return h;
+  const y = NOTE_Y[c];
+  h += c === 'S' ? `<i class="nx" style="top:${y}px"></i>` : `<i class="nh ${c}" style="top:${y}px"></i>`;
+  if (nt.d < 4 || true) h += `<i class="nstem" style="height:${y - 3}px"></i>`;
+  if (nt.b1) h += `<i class="nbeam" style="width:calc(${nt.b1} * (100% + 2px))"></i>`;
+  if (nt.b2) h += `<i class="nbeam b2" style="width:calc(${nt.b2} * (100% + 2px))"></i>`;
+  if (nt.stub) h += `<i class="nbeam b2 stub ${nt.stub}"></i>`;
+  if (nt.flags) h += `<i class="nflag"></i>` + (nt.flags > 1 ? `<i class="nflag f2"></i>` : '');
+  if (nt.dot) h += `<i class="ndot" style="top:${y}px"></i>`;
+  if (nt.tup) h += `<b class="ntup">3</b>`;
+  return h;
+}
 
 let curGrid = null;
 function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
@@ -315,11 +356,13 @@ function renderGrid(el, g, { editable = false, autoScroll = true } = {}) {
     const bd = document.createElement('div'); bd.className = 'bar' + (n > 16 ? ' wide' : '');
     let h = `<div class="bn">第 ${bi + 1} 小節</div><div class="row-g">`;
     const grpSize = g.counts ? 2 : g.spb; // bulerías: group per count
+    const nts = [];
+    for (let s0 = 0; s0 < n; s0 += grpSize) nts.push(...beatNotation(bar.slice(s0, s0 + grpSize).split(''), grpSize === g.spb ? g.spb : 2));
     for (let s = 0; s < n; s++) {
       if (s % grpSize === 0) h += (s ? '</div>' : '') + '<div class="grp">';
       const c = bar[s]; const idx = bi * n + s;
       const cnt = counts[s]; const isBeat = s % g.spb === 0;
-      h += `<div class="col${editable ? ' edit' : ''}${s && s % grpSize === 0 ? ' g0' : ''}" data-i="${idx}"><div class="n ${c === '.' ? 'r' : c}">${c === '.' ? '·' : c}</div><div class="c${isBeat ? '' : ' off'}">${esc(cnt)}</div><div class="h">${hs[s]}</div></div>`;
+      h += `<div class="col${editable ? ' edit' : ''}${s && s % grpSize === 0 ? ' g0' : ''}" data-i="${idx}"><div class="nt">${noteHtml(c, nts[s])}</div><div class="c${isBeat ? '' : ' off'}">${esc(cnt)}</div><div class="h">${hs[s]}</div></div>`;
     }
     h += '</div></div>';
     bd.innerHTML = h; el.appendChild(bd);
@@ -496,7 +539,7 @@ function numSheet(title, fields, done) {
 let libCat = 'all', libQ = '';
 function viewLibrary(v) {
   const cats = [{ id: 'all', name: '全部' }, { id: 'fav', name: '★ 收藏' }, ...(allGrooves().some(g => g.custom) ? [{ id: 'mine', name: '我的節奏' }] : []), ...CATS];
-  v.innerHTML = `<div class="hd"><div class="grow"><h1>節奏庫</h1><div class="sub">${GROOVES.length} 種律動・木箱鼓格狀譜</div></div></div>
+  v.innerHTML = `<div class="hd"><div class="grow"><h1>節奏庫</h1><div class="sub">${GROOVES.length} 種律動・木箱鼓音符譜</div></div></div>
   <div class="search">${I.search}<input class="input" id="q" placeholder="搜尋節奏，例如：抒情、Funk、6/8" value="${esc(libQ)}"></div>
   <div class="chips" id="cats">${cats.map(c => `<button class="chip ${c.id === libCat ? 'on' : ''}" data-c="${c.id}">${c.name}</button>`).join('')}</div>
   <div id="gl"></div>`;
@@ -685,7 +728,7 @@ function viewSong(v, id) {
   if (!song) { v.innerHTML = `<div class="empty">找不到這首歌<br><br><button class="btn" onclick="location.hash='songs'">回歌曲</button></div>`; return; }
   S.sBpm = S.sBpm || {};
   const planBpm = S.sBpm[id] || song.bpm, plan = songPlan(song, planBpm);
-  let bpm = planBpm, src = song.cover ? 'cover' : 'orig', sel = 0, loopOn = false, curSec = -1, lastKey = '', everPlayed = false;
+  let bpm = planBpm, src = 'orig', sel = 0, loopOn = false, curSec = -1, lastKey = '', everPlayed = false;
   const afuTL = () => !!song.drums && (src === 'cover' || song.coverOnly);
   const offKey = () => id + (src === 'cover' ? '@c' : '');
   const autoOff = () => { if (!afuTL() || !song.drums.on.length) return 0; const bar = 240 / bpm, s0 = song.drums.on[0][0]; return Math.round((s0 - Math.round(s0 / bar) * bar) * 100) / 100; };
@@ -698,7 +741,7 @@ function viewSong(v, id) {
     ${song.custom ? `<button class="icon-btn" id="sEdit" aria-label="編輯">${I.edit}</button>` : ''}</div>
   <div class="song-top">
     <div>
-      ${song.yt ? `${song.cover ? `<div class="seg" id="srcSeg" style="margin-bottom:10px"><button data-s="cover" class="on">木箱鼓示範（附譜）</button><button data-s="orig">原曲</button></div>` : ''}
+      ${song.yt ? `${song.cover ? `<div class="seg" id="srcSeg" style="margin-bottom:10px"><button data-s="orig" class="on">原曲</button><button data-s="cover">木箱鼓示範</button></div>` : ''}
       <div class="yt-box" id="yt"></div>` : `<div class="card empty" style="padding:24px">這首沒有影片</div>`}
       <div class="card now" id="now">
         <div class="now-top"><b id="nowSec"></b><span class="pill" id="nowState"></span><span class="now-bar num" id="nowBar"></span></div>

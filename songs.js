@@ -21,7 +21,7 @@ window.SONG_META = {
   '看著我的眼睛說': { bpm: 77, cover: { yt: 'Ja4jG5Sqqtw', by: 'A FU Cajon' },
     sections: [['前奏', 'rest', 4], ['主歌', 'rest', 8], ['主歌', 'pop-ballad', 8], ['副歌', 'ghost-intro', 16], ['間奏', 'rest', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['橋段', 'rest', 8], ['過門', 'fill-ballad', 1], ['副歌', 'ghost-intro', 16], ['尾奏', 'rest', 4]] },
   '幸福在歌唱': { bpm: 65, cover: { yt: 'IWEk3vO5UMk', by: 'Mr.One 木箱鼓' },
-    sections: [['前奏', 'rest', 4], ['主歌', 'rest', 16], ['副歌', 'worship', 16], ['間奏', 'rest', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['橋段', 'rest', 8], ['過門', 'fill-ballad', 1], ['副歌', 'ghost-intro', 16], ['尾奏', 'rest', 4]] },
+    sections: [['前奏', 'rest', 4], ['主歌', 'rest', 16], ['副歌', 'pop-ballad', 16], ['間奏', 'rest', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['橋段', 'rest', 8], ['過門', 'fill-ballad', 1], ['副歌', 'ghost-intro', 16], ['尾奏', 'rest', 4]] },
   '海嶼你': { bpm: 75, artist: '馬也_Crabbit', cover: { yt: '1ZW7peoDayU', by: '動態鼓譜' },
     sections: [['前奏', 'rest', 4], ['主歌', 'rest', 16], ['副歌', 'pop-ballad', 16], ['間奏', 'rest', 4], ['主歌', 'pop-ballad', 16], ['副歌', 'ghost-intro', 16], ['橋段', 'rest', 8], ['過門', 'fill-ballad', 1], ['副歌', 'ghost-intro', 16], ['尾奏', 'rest', 4]] }
 };
